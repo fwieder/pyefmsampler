@@ -315,11 +315,14 @@ def umap_supps(efms, labels=None):
         alpha=0.8
     )
 
-    plt.title("2D UMAP Projection (Hamming Distance) — Shaded by Appearance Order")
+    plt.title("UMAP Projection (Hamming Distance) - " + str(len(efms)) + "EFMs")
     plt.xlabel("UMAP1")
     plt.ylabel("UMAP2")
     cbar = plt.colorbar(scatter)
     cbar.set_label("EFM Index (Early → Late)")
+    
+    plt.figtext(0.5, -0.05, f"Trustworthiness (0-1): {trust:.3f}" + "    " + f"Pairwise Distance Std Dev (Spread): {spread:.3f}", ha="center", fontsize=10)
+
     plt.tight_layout()
     plt.show()
 
