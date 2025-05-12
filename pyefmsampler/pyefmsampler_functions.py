@@ -21,6 +21,37 @@ from scipy.optimize import linprog
 # Helper Functions
 ###############################################################################
 
+
+
+
+def combine_efms(efm1,efm2,target,model):
+    rev_supp1 = np.intersect1d(supp(model.rev), supp(efm1))
+    rev_supp2 = np.intersect1d(supp(model.rev), supp(efm2))
+    
+    pos1 = np.intersect1d(np.where(efm1 > 0)[0],rev_supp1)
+    pos2 = np.intersect1d(np.where(efm2 > 0)[0],rev_supp1)
+    
+    neg2 = np.intersect1d(np.where(efm1 < 0)[0],rev_supp1)
+    neg2 = np.intersect1d(np.where(efm2 < 0)[0],rev_supp2)
+    possible_cancels = np.union1d(np.intersect1d(pos1, neg2),np.intersect1d(pos1,neg2))
+    combined_supp = np.union1d(supp(efm1),supp(efm2))
+    new_efms = []
+    new_supps = []
+    if len(possible_cancels) == 0:
+        return []
+    for cancel_index in possible_cancels:
+        blockset = np.union1d(np.setdiff1d(np.arange(model.num_reacs),combined_supp),cancel_index)
+        composed_efm =  unsplit_vector(find_efm(model.split_stoich, target, blocked=blockset),model)
+        if len(supp(composed_efm>0)) and tuple(supp(composed_efm)) not in new_supps:
+            new_efms.append(composed_efm)
+            new_supps.append(tuple(supp(composed_efm)))
+                
+    return new_efms
+
+
+
+
+
 def supp(vector, tol=1e-8):
     """
     Parameters
@@ -34,7 +65,7 @@ def supp(vector, tol=1e-8):
         contains indices of nonzero entries in the input vector
     
     """ 
-    return np.where(abs(np.array(vector)) > tol)[0]
+    return tuple(np.where(abs(np.array(vector)) > tol)[0])
 
 
 def zero(vector, tol=1e-8):
@@ -109,71 +140,6 @@ def unsplit_vector(split_vector, model):
     unsplit = orig - tosub  # Reconstruct the original flux vector
     
     return unsplit
-
-  
-def plot_reaction_frequencies(efms,model_id):
-    """
-
-    Parameters
-    ----------
-    efms : np.array
-        Set of EFMs
-    model_id : str
-        Name of the model for title
-
-    Returns
-    -------
-    Plots the frequency of each reaction in the input-efms as a bar diagram.
-
-    """
-    
-    rea_freqs = sum([list(supp(efm)) for efm in efms],[])
-    
-    data = sorted(Counter(rea_freqs).items())
-    print(f"{len(data)} different reactions used.")
-    
-    ax = plt.figure().gca()      # Get the current axes
-    ax.set_title(model_id + " - pyefmsampler found EFMs: " + str(len(efms)))
-    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_xlabel("Reaction Index")
-    ax.set_ylabel("Number of EFMs")
-    plt.bar(list(zip(*data))[0],list(zip(*data))[1])
-    plt.savefig(model_id + "pyefmsampler_" + model_id +".pdf",dpi=300)
-    plt.show()
-    
-
-def plot_efm_lengths(efms,model_id):
-    """
-
-    Parameters
-    ----------
-    efms : np.array
-        Set of EFMs
-    model_id : str
-        Name of the model for title
-
-    Returns
-    -------
-    Plots the lengths of the supports of the input-efms as a bar diagram.
-
-    """
-    
-    efm_lens = [len(supp(efm)) for efm in efms]
-    
-    data = sorted(Counter(efm_lens).items())
-   
-    
-    ax = plt.figure().gca()      # Get the current axes
-    ax.set_title(model_id + " - pyefmsampler found EFMs: " + str(len(efms)))
-    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_xlabel("Efm_length")
-    ax.set_ylabel("Number of EFMs")
-    plt.bar(list(zip(*data))[0],list(zip(*data))[1])
-    plt.savefig(model_id + "pyefmsampler_" + model_id +".pdf",dpi=300)
-    plt.show()
-
 
 
 def check_essential(S,biomass_index,reaction_index):
@@ -276,106 +242,6 @@ def supports_to_binary_matrix(supports, vector_length):
         mat[i, supp] = 1
     return mat
 
-def umap_supps(efms, labels=None):
-    import umap
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from sklearn.manifold import trustworthiness
-    from sklearn.metrics import silhouette_score
-    from sklearn.metrics import pairwise_distances
-
-    # Fit UMAP
-    umap_model = umap.UMAP(n_components=2, metric='hamming',random_state=42)
-    embedding = umap_model.fit_transform(efms)
-
-    # Compute trustworthiness score
-    trust = trustworthiness(efms, embedding, n_neighbors=5)
-    print(f"Trustworthiness (0-1): {trust:.3f}")
-
-    # Optional: Silhouette score (requires labels)
-    if labels is not None:
-        sil_score = silhouette_score(embedding, labels)
-        print(f"Silhouette Score (0-1): {sil_score:.3f}")
-
-    # Pairwise distance variance (spread)
-    pairwise_dist = pairwise_distances(embedding)
-    spread = np.std(pairwise_dist)
-    print(f"Pairwise Distance Std Dev (Spread): {spread:.3f}")
-
-    # Create a color gradient based on entry order
-    n = efms.shape[0]
-    colors = np.linspace(0, 1, n)
-
-    plt.figure(figsize=(10, 7))
-    scatter = plt.scatter(
-        embedding[:, 0],
-        embedding[:, 1],
-        c=colors,
-        cmap='Reds',
-        alpha=0.8
-    )
-
-    plt.title("UMAP Projection (Hamming Distance) - " + str(len(efms)) + "EFMs")
-    plt.xlabel("UMAP1")
-    plt.ylabel("UMAP2")
-    cbar = plt.colorbar(scatter)
-    cbar.set_label("EFM Index (Early → Late)")
-    
-    plt.figtext(0.5, -0.05, f"Trustworthiness (0-1): {trust:.3f}" + "    " + f"Pairwise Distance Std Dev (Spread): {spread:.3f}", ha="center", fontsize=10)
-
-    plt.tight_layout()
-    plt.show()
-
-    return embedding
-
-def pca_efms(efms, labels=None):
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from sklearn.decomposition import PCA
-    from sklearn.manifold import trustworthiness
-    from sklearn.metrics import silhouette_score
-    from sklearn.metrics import pairwise_distances
-
-    # Fit PCA
-    pca_model = PCA(n_components=2)
-    embedding = pca_model.fit_transform(efms)
-
-    # Compute trustworthiness score
-    trust = trustworthiness(efms, embedding, n_neighbors=5)
-    print(f"Trustworthiness (0-1): {trust:.3f}")
-
-    # Optional: Silhouette score (requires labels)
-    if labels is not None:
-        sil_score = silhouette_score(embedding, labels)
-        print(f"Silhouette Score (0-1): {sil_score:.3f}")
-
-    # Pairwise distance variance (spread)
-    pairwise_dist = pairwise_distances(embedding)
-    spread = np.std(pairwise_dist)
-    print(f"Pairwise Distance Std Dev (Spread): {spread:.3f}")
-
-    # Create a color gradient based on entry order
-    n = efms.shape[0]
-    colors = np.linspace(0, 1, n)
-
-    plt.figure(figsize=(10, 7))
-    scatter = plt.scatter(
-        embedding[:, 0],
-        embedding[:, 1],
-        c=colors,
-        cmap='Blues',
-        alpha=0.8
-    )
-
-    plt.title("2D PCA Projection — Shaded by Appearance Order")
-    plt.xlabel("PCA1")
-    plt.ylabel("PCA2")
-    cbar = plt.colorbar(scatter)
-    cbar.set_label("EFM Index (Early → Late)")
-    plt.tight_layout()
-    plt.show()
-
-    return embedding
 
 
 class FluxCone:

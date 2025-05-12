@@ -6,13 +6,12 @@ Created on Fri Apr 25 11:13:50 2025
 @author: frederik
 """
 
-from pyefmsampler_functions import find_objective_index,find_efm,FluxCone,find_essential_reactions,supp,unsplit_vector,umap_supps,supports_to_binary_matrix
+from pyefmsampler_functions import find_objective_index,find_efm,FluxCone,find_essential_reactions,supp,unsplit_vector,supports_to_binary_matrix, combine_efms
 import numpy as np
 from scipy.optimize import linprog
 import random
 import cobra
 from tqdm import tqdm
-
 ###############################################################################
 # HELPER FUNCTIONS ARE IN "pyefmsampler_functions"
 ###############################################################################
@@ -83,32 +82,61 @@ def sample_efms(model, target,search_strategy:str,max_attempts=1000,max_efms = 1
     return efms
 
 if __name__ == "__main__":
+    model_id = "iAF1260"
+    cobra_model = cobra.io.load_model(model_id)
+    model_id = "/Users/frederik/Documents/pyefmsampler/metamodel_20230510.xml"
+    
+    cobra_model = cobra.io.read_sbml_model(model_id)
+    essential_indices =[20352,20372,20408,20590,21153,21845,21861,22346,23939,24307,24311,24319,24784,27563,27564,27565,27566,27567,27568,27569,48728,48849]
+    
+    objective_index = find_objective_index(cobra_model)
+    
+    model = FluxCone.from_sbml(model_id)
+    #all_coli_efms = model.get_efms_efmtool()
+    #all_coli_supps = [supp(efm) for efm in all_coli_efms if objective_index in supp(efm)]
+
+    num_efms = 100
+    efm_sample = sample_efms(model,objective_index,"rf",max_attempts=10000,max_efms = num_efms,random_search_direction=True,essential_indices=essential_indices)
+    efm_sample = np.array([unsplit_vector(efm,model) for efm in efm_sample])
+    sample_supps = [tuple(supp(efm)) for efm in efm_sample]
+    combined_efms = []
+    combined_supps = []
+    for i in tqdm(range(1000)):
+        pair = random.sample(range(num_efms),2)
+        new_efms = compose_efm(efm_sample[pair[0]],efm_sample[pair[1]],objective_index,model)
+        for efm in new_efms:
+            if tuple(supp(efm)) not in combined_supps:
+                combined_efms.append(efm)
+                combined_supps.append(tuple(supp(efm)))
+    import sys
+    sys.exit()
+    for sample_size in [100,500,2500,5000]:
+        umap_supps_sample(supports_to_binary_matrix(all_coli_supps, len(all_coli_efms[0])),supports_to_binary_matrix(sample_supps[:sample_size],len(efm_sample[0])),neighbors=100)
+    
     #model_id = "/Users/frederik/Documents/pyefmsampler/metamodel_20230510.xml"
     #cobra_model = cobra.io.read_sbml_model(model_id)
     #essential_indices =[20352,20372,20408,20590,21153,21845,21861,22346,23939,24307,24311,24319,24784,27563,27564,27565,27566,27567,27568,27569,48728,48849]
     
-    model_id = "iAB_RBC_283"
-    cobra_model = cobra.io.load_model(model_id)
-
-    stoich = cobra.util.array.create_stoichiometric_matrix(cobra_model)
-    rev = np.array([rea.reversibility for rea in cobra_model.reactions]).astype(int)
-    objective_index = find_objective_index(cobra_model)
+    #model = FluxCone.from_bigg_id(model_id)
+    #cobra_model = cobra.io.load_model(model_id)
     
-    model = FluxCone(stoich, rev)
-    essential_indices = find_essential_reactions(model.split_stoich, objective_index)
-    for efm_number in [100,200,500,1000,2000]:
-        
-        sample_efms1 = sample_efms(model,objective_index,"rf",max_attempts = 10000, max_efms = efm_number,essential_indices=essential_indices,random_search_direction=False)
-        sample_efms1 = np.array([unsplit_vector(efm,model) for efm in sample_efms1])
-        #sample_efms2 = sample_efms(model,objective_index,"rf",max_attempts = 10000, max_efms = efm_number,essential_indices=essential_indices,random_search_direction=True)
-        #sample_efms2 = np.array([unsplit_vector(efm,model) for efm in sample_efms2])
-        sample_supports1 = [supp(efm) for efm in sample_efms1]
-        #sample_supports2 = [supp(efm) for efm in sample_efms2]
-        umap_supps(supports_to_binary_matrix(sample_supports1, len(sample_efms1[0])))
-        #umap_supps(supports_to_binary_matrix(sample_supports2, len(sample_efms2[0])))
-        #pca_efms(sample_efms1)
-        #pca_efms(sample_efms2)
-        #all_efms = model.get_efms_efmtool()
-        #all_supps = [supp(efm) for efm in all_efms]
-        #umap_supps(supports_to_binary_matrix(all_supps, len(all_efms[0])))
+    
+    import sys
+    
+    sys.exit()
+#%%    
+
+    f = open("/Users/frederik/EFMSample-27563.list","r")
+    lines = [line.rstrip('\n') for line in f]
+    supports = [[int(x) for x in line.split(",")] for line in lines]
+    f.close()
+    max_val = (max([max(sup) for sup in supports]))
+    umap_supps(supports_to_binary_matrix(supports, max_val+1),neighbors=100)
+    
+    
+    #%%
+    
+    sample_efms = np.load("/Users/frederik/pyefmsampler_metamodel_10k.npy")
+    sample_supps = [supp(efm) for efm in sample_efms]
+    umap_supps(supports_to_binary_matrix(sample_supps,len(sample_efms[0])),neighbors=100)
     
