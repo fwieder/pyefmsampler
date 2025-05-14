@@ -86,6 +86,8 @@ def plot_efm_lengths(efms,model_id):
     plt.show()
 
 def umap_two_samples(efms1,efms2, neighbors = 10):
+    efms1 = supports_to_binary_matrix([supp(efm) for efm in efms1], len(efms1[0]))
+    efms2 = supports_to_binary_matrix([supp(efm) for efm in efms2], len(efms2[0]))    
     
     all_efms = np.r_[efms1,efms2]
     

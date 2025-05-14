@@ -25,6 +25,25 @@ from scipy.optimize import linprog
 
 
 def combine_efms(efm1,efm2,target,model):
+    """
+    Find specific large blocksets, by combining two EFMs and cancelling a reversible reaction. The corresponding LP is typically significantly less complex than in the general case.
+    Parameters
+    ----------
+    efm1 : np.array
+        First EFM
+    efm2 : np.array
+        Second EFM
+    target : int
+        Reaction that must be active
+    model : FluxCone object
+        Fluxcone that has the input vectors as EFMs.
+
+    Returns
+    -------
+    list
+        List containing EFMs that result from combining input EFMs.
+    """
+    
     rev_supp1 = np.intersect1d(supp(model.rev), supp(efm1))
     rev_supp2 = np.intersect1d(supp(model.rev), supp(efm2))
     
@@ -207,13 +226,11 @@ def find_efm(S, target: int, blocked = [],costs = None):
     np.ndarray: EFM containing target reaction and not containing blocked reactions that minimizes c^Tx.
     """
     
-
-    
     n = S.shape[1]  # Number of variables
     
     # Objective function: minimize sum of all x_i
     if costs is None:
-        c = np.ones(S.shape[1])
+        c = np.ones(n)
     else:
         c = costs
     
