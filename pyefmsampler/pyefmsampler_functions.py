@@ -354,7 +354,7 @@ class FluxCone:
         The function calculates the degree of a vector within the flux cone.
         """
         # non-negativity constraints defined by v_irr >= 0
-        nonegs = np.eye(self.num_reacs)[supp(self.irr)]
+        nonegs = np.eye(self.num_reacs)[np.array(supp(self.irr))]
 
         # outer description of the flux cone by C = { x | Sx >= 0}
         S = np.r_[self.stoich, nonegs]
@@ -396,7 +396,7 @@ class FluxCone:
        
 
         if only_reversible:
-            S = np.r_[self.stoich, np.eye(self.num_reacs)[supp(self.irr)]]
+            S = np.r_[self.stoich, np.eye(self.num_reacs)[np.array(supp(self.irr))]]
         else:
             S = self.stoich
 

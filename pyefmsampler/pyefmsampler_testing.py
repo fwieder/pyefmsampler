@@ -35,7 +35,8 @@ if __name__ == "__main__":
     #efm_sample = np.array([unsplit_vector(efm,model) for efm in efm_sample])
     
     
-    efms_combined = efm_combiner(model,objective_index,efm_sample,1000,recombine =True)
-    
+    #efms_combined = efm_combiner(model,objective_index,efm_sample,1000,recombine =True)
+    for efm in efm_sample:
+        print(model.degree(efm))
     #%%
 
