@@ -362,6 +362,14 @@ class FluxCone:
         return int(self.num_reacs - np.linalg.matrix_rank(S[zero(np.dot(S, vector))]))
     
     
+    def get_lin_dim(self):
+        """
+        Calculate and returns the linear dimension of the flux cone based on its row and column spaces.
+        """
+        return len(supp(self.rev)) - np.linalg.matrix_rank(
+            self.stoich[:, np.array(supp(self.rev)) ]
+        )
+    
     
     
     def get_efms_efmtool(self, only_reversible=False,opts = dict({
