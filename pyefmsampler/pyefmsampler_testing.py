@@ -24,23 +24,23 @@ if __name__ == "__main__":
     
     #model = FluxCone.from_sbml(model_id)
     
-    #model_id = "iAF1260"
-    #cobra_model = cobra.io.load_model(model_id)
-    #model = FluxCone.from_bigg_id(model_id)
-    #objective_index = find_objective_index(cobra_model)
-    #essential_indices = find_essential_reactions(model.split_stoich, objective_index)
+    model_id = "iAF1260"
+    cobra_model = cobra.io.load_model(model_id)
+    model = FluxCone.from_bigg_id(model_id)
+    objective_index = find_objective_index(cobra_model)
+    essential_indices = find_essential_reactions(model.split_stoich, objective_index)
     
-    #attempts = 100000
-    #max_efms = 10000
+    attempts = 100000
+    max_efms = 10000
     
-    #efm_sample = sample_efms(model,objective_index,"rf",attempts,max_efms,essential_indices,True)
-    #efm_sample = np.array([unsplit_vector(efm,model) for efm in efm_sample])
+    efm_sample = sample_efms(model,objective_index,"rf", 10 , attempts,max_efms,essential_indices,True)
+    efm_sample = np.array([unsplit_vector(efm,model) for efm in efm_sample])
     
     
     #efms_combined = efm_combiner(model,objective_index,efm_sample,1000,recombine =True)
     #print(model.get_lin_dim())
     #%%
-
+"""
      S = np.array([[ 1., -1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
                [ 0.,  1.,  1.,  0., -1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
                [ 0.,  1.,  0., -1.,  0., -1.,  0.,  0.,  0.,  0.,  0.,  0.],
@@ -51,9 +51,10 @@ if __name__ == "__main__":
      rev = np.array([1,0,1,1,1,0,0,0,1,1,1,1])
 
      model = FluxCone(S,rev)
+   
      
-     
-     efm_sample = sample_efms(model,0,"df",1000,21,[],False)
+     efm_sample = sample_efms(model,14,"df",800,1000,21,[],False)
      efm_sample = np.array([unsplit_vector(efm,model) for efm in efm_sample])
      for efm in efm_sample:
-         print([int(val) for val in supp(efm)])
+         print([int(val)+1 for val in supp(efm)])
+"""

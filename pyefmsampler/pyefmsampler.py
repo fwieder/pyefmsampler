@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 
 
-def sample_efms(model, target,search_strategy:str,max_attempts=1000,max_efms = 1000,essential_indices = [],random_search_direction = False):
+def sample_efms(model, target,search_strategy:str = "wf", blockset_percent:int = 100 ,max_attempts=1000,max_efms = 1000,essential_indices = [],random_search_direction = False):
     
     """
     Repeatedly calls find_efm with randomly chosen blocked sets until
@@ -73,9 +73,10 @@ def sample_efms(model, target,search_strategy:str,max_attempts=1000,max_efms = 1
                     if len(efms) == max_efms:
                         return efms
                     supports.append(supp(efm))
-                    for i in supp(efm):
+                    for i in random.sample(supp(efm), round(len(supp(efm))*blockset_percent/100)):
                         if i not in essential_indices and sorted(blocked+[np.int64(i)]) not in blocksets:
                             blocksets.append(sorted(blocked + [np.int64(i)]))
+                            
             except ValueError:
                 pass
             pbar.set_postfix({"EFMs Found": len(efms),"Remaining blocksets":len(blocksets),"Last EFM Length":len(supp(efm))}) # Update progress bar info
