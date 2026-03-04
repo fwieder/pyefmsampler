@@ -8,21 +8,21 @@ Created on Thu May  8 10:54:01 2025
 
 
 import numpy as np
-import cobra
-import tqdm
 import matplotlib.pyplot as plt
+import umap
 
 from collections import Counter
+
+from pyefmsampler_functions import supports_to_binary_matrix,supp
+
 from matplotlib.ticker import MaxNLocator
-from scipy.optimize import linprog
-from pyefmsampler_functions import *
-import umap
-import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+
 from sklearn.manifold import trustworthiness
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import pairwise_distances
 
-def plot_reaction_frequencies(efms,model_id):
+def plot_reaction_frequencies(efms,model):
     """
 
     Parameters
@@ -50,7 +50,7 @@ def plot_reaction_frequencies(efms,model_id):
     ax.set_xlabel("Reaction Index")
     ax.set_ylabel("Number of EFMs")
     plt.bar(list(zip(*data))[0],list(zip(*data))[1])
-    plt.savefig(model_id + "pyefmsampler_" + model_id +".pdf",dpi=300)
+    plt.savefig(model_id + "pyefmsampler_" + model.id +".pdf",dpi=300)
     plt.show()
     
 
@@ -123,11 +123,11 @@ def umap_two_samples(efms1,efms2, neighbors = 10):
     
 
 def umap_supps(efms, labels=None,neighbors = 10):
-    
+    efms = supports_to_binary_matrix([supp(efm) for efm in efms], len(efms[0]))
+
     # Fit UMAP
     umap_model = umap.UMAP(n_components=2, metric='hamming',n_neighbors=neighbors,min_dist=0.1,random_state=42)
     embedding = umap_model.fit_transform(efms)
-
     # Compute trustworthiness score
     trust = trustworthiness(efms, embedding, n_neighbors=neighbors)
 
@@ -169,9 +169,9 @@ def umap_supps(efms, labels=None,neighbors = 10):
 
     return embedding
 
-def umap_supps_sample(full_set, sample, labels=None, neighbors=10):
-
-
+def umap_supps_sample(full_set, sample, labels=None, neighbors=10, name = ""):
+    full_set = supports_to_binary_matrix([supp(efm) for efm in full_set], len(full_set[0]))
+    sample = supports_to_binary_matrix([supp(efm) for efm in sample], len(sample[0]))
     # Define a helper to convert rows to consistent tuples of ints
     def row_key(row):
         return tuple(int(x) for x in row)
@@ -206,15 +206,138 @@ def umap_supps_sample(full_set, sample, labels=None, neighbors=10):
     plt.scatter(embedding_full[:, 0], embedding_full[:, 1], c='lightgray', alpha=0.5, s=5, label='Full set')
     scatter = plt.scatter(embedding_sample[:, 0], embedding_sample[:, 1], c=colors, cmap='Reds', s=5, alpha=0.9, label='Sample subset')
 
-    plt.title("UMAP Projection (Hamming) — Sample vs Full Set")
+    plt.title(f"UMAP Projection {name} — Sample ({len(sample)} EFMs) vs Full Set ({len(full_set)} EFMs)")
     plt.xlabel("UMAP1")
     plt.ylabel("UMAP2")
     cbar = plt.colorbar(scatter)
     cbar.set_label("Sample Index (Early → Late)")
-    plt.legend(loc='upper right')
-    plt.figtext(0.5, -0.05, f"Trustworthiness: {trust:.3f}    Spread: {spread:.3f}", ha="center", fontsize=10)
+    sample_legend = Line2D( [0], [0], marker='o', color='w', markerfacecolor='red', markersize=6, label='Sample subset')
+    
+    plt.legend(handles=[Line2D([0], [0], marker='o', color='w', markerfacecolor='lightgray', markersize=6, label='Full set'), sample_legend], loc='upper right')
+    
+    plt.figtext(0.5, -0.05, f"Trustworthiness: {trust:.3f}    Spread: {spread:.3f}    n_neighbors: {neighbors}", ha="center", fontsize=10)
 
     plt.tight_layout()
     plt.show()
 
     return embedding_full, embedding_sample
+
+
+def umap_supps_multiple(
+    full_set,
+    samples,
+    names=None,
+    neighbors=10,
+    title_name="",
+    min_dist=0.1
+):
+    """
+    full_set : list of EFMs
+    samples  : list of sample lists (each sample must be subset of full_set)
+    names    : list of names for samples
+    neighbors: UMAP n_neighbors
+    """
+
+    # ---------- Convert to binary supports ----------
+    full_bin = supports_to_binary_matrix(
+        [supp(efm) for efm in full_set],
+        len(full_set[0])
+    )
+
+    def row_key(row):
+        return tuple(int(x) for x in row)
+
+    full_rows_dict = {row_key(row): idx for idx, row in enumerate(full_bin)}
+
+    # ---------- Fit UMAP ONCE ----------
+    umap_model = umap.UMAP(
+        n_components=2,
+        metric="hamming",
+        n_neighbors=neighbors,
+        min_dist=min_dist,
+        random_state=42
+    )
+
+    embedding_full = umap_model.fit_transform(full_bin)
+
+    # ---------- Compute global metrics ----------
+    trust = trustworthiness(full_bin, embedding_full, n_neighbors=neighbors)
+    spread = np.std(pairwise_distances(embedding_full))
+
+    # ---------- Plot ----------
+    plt.figure(figsize=(10, 7))
+
+    # Plot full set (background)
+    plt.scatter(
+        embedding_full[:, 0],
+        embedding_full[:, 1],
+        c="lightgray",
+        alpha=0.4,
+        s=5
+    )
+
+    legend_handles = [
+        Line2D([0], [0], marker="o", color="w",
+               markerfacecolor="lightgray",
+               markersize=6,
+               label=f"Full set ({len(full_set)})")
+    ]
+
+    # Color palette
+    cmap = plt.cm.Set1
+    sample_embeddings = []
+
+    for i, sample in enumerate(samples):
+
+        sample_bin = supports_to_binary_matrix(
+            [supp(efm) for efm in sample],
+            len(sample[0])
+        )
+
+        # Map to full embedding indices
+        try:
+            indices = [full_rows_dict[row_key(row)] for row in sample_bin]
+        except KeyError:
+            raise ValueError(
+                f"Sample {i} contains elements not present in full_set."
+            )
+
+        embedding_sample = embedding_full[indices]
+        sample_embeddings.append(embedding_sample)
+
+        color = cmap(i % 20)
+
+        plt.scatter(
+            embedding_sample[:, 0],
+            embedding_sample[:, 1],
+            color=color,
+            s=12,
+            alpha=0.9
+        )
+
+        if names:
+            label = f"{names[i]} ({len(sample)})"
+        else:
+            label = f"Sample {i+1} ({len(sample)})"
+        legend_handles.append(
+            Line2D([0], [0], marker="o", color="w",
+                   markerfacecolor=color,
+                   markersize=6,
+                   label=label)
+        )
+
+    plt.legend(handles=legend_handles, loc="upper right")
+
+    plt.title(
+        f"UMAP Projection {title_name}\n"
+        f"Trustworthiness: {trust:.3f} | "
+        f"Spread: {spread:.3f} | "
+        f"n_neighbors: {neighbors}"
+    )
+
+    plt.xlabel("UMAP1")
+    plt.ylabel("UMAP2")
+    plt.tight_layout()
+    plt.show()
+
+    return embedding_full, sample_embeddings

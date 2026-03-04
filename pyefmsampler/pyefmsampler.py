@@ -6,7 +6,7 @@ Created on Fri Apr 25 11:13:50 2025
 @author: frederik
 """
 
-from pyefmsampler_functions import find_efm,supp,find_essential_reactions,combine_efms
+from pyefmsampler_functions import find_efm,supp,find_essential_reactions,combine_efms,unsplit_vector
 import numpy as np
 import random
 from tqdm import tqdm
@@ -52,7 +52,7 @@ def sample_efms(model, target,search_strategy:str = "wf", blockset_percent:int =
         print("Determining essential reactions...")
         essential_indices = find_essential_reactions(S, target)
         print(len(essential_indices), "essential reactions found.")
-    
+    curr_dim = 1
     with tqdm(total=max_attempts, desc="Searching EFMs") as pbar:
         for attempts in range(max_attempts):
             if len(blocksets) == 0:
@@ -70,6 +70,8 @@ def sample_efms(model, target,search_strategy:str = "wf", blockset_percent:int =
 
                 if supp(efm) not in supports: # and len(supp(efm))>2:
                     efms.append(efm)
+                    #if len(efms) % 50 == 0:
+                    #    curr_dim = np.linalg.matrix_rank(np.array([unsplit_vector(efm,model) for efm in efms]))
                     if len(efms) == max_efms:
                         return efms
                     supports.append(supp(efm))
@@ -79,7 +81,7 @@ def sample_efms(model, target,search_strategy:str = "wf", blockset_percent:int =
                             
             except ValueError:
                 pass
-            pbar.set_postfix({"EFMs Found": len(efms),"Remaining blocksets":len(blocksets),"Last EFM Length":len(supp(efm))}) # Update progress bar info
+            pbar.set_postfix({"EFMs Found": len(efms),"Remaining blocksets":len(blocksets)}) #,"Dimension of sample": curr_dim}) # Update progress bar info
             
     return efms
 

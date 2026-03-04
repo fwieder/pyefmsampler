@@ -24,7 +24,7 @@ from scipy.optimize import linprog
 
 
 
-def combine_efms(efm1,efm2,target,model):
+def combine_efms(efm1,efm2,target,model,max_new_efms = 0):
     """
     Find specific large blocksets, by combining two EFMs and cancelling a reversible reaction. The corresponding LP is typically significantly less complex than in the general case.
     Parameters
@@ -50,9 +50,10 @@ def combine_efms(efm1,efm2,target,model):
     pos1 = np.intersect1d(np.where(efm1 > 0)[0],rev_supp1)
     pos2 = np.intersect1d(np.where(efm2 > 0)[0],rev_supp1)
     
-    neg2 = np.intersect1d(np.where(efm1 < 0)[0],rev_supp1)
+    neg1 = np.intersect1d(np.where(efm1 < 0)[0],rev_supp1)
     neg2 = np.intersect1d(np.where(efm2 < 0)[0],rev_supp2)
-    possible_cancels = np.union1d(np.intersect1d(pos1, neg2),np.intersect1d(pos1,neg2))
+    
+    possible_cancels = np.union1d(np.intersect1d(pos1, neg2),np.intersect1d(pos2,neg1))
     combined_supp = np.union1d(supp(efm1),supp(efm2))
     new_efms = []
     new_supps = []
@@ -64,7 +65,8 @@ def combine_efms(efm1,efm2,target,model):
         if len(supp(composed_efm>0)) and tuple(supp(composed_efm)) not in new_supps:
             new_efms.append(composed_efm)
             new_supps.append(tuple(supp(composed_efm)))
-                
+            if len(new_efms) >= max_new_efms and max_new_efms > 0:
+                return new_efms
     return new_efms
 
 
@@ -263,7 +265,7 @@ def supports_to_binary_matrix(supports, vector_length):
 
 class FluxCone:
 
-    def __init__(self, stoichiometry: np.array, reversibility: np.array):
+    def __init__(self, stoichiometry: np.array, reversibility: np.array, cobra_model = None):
         """
         This Python function initializes a class instance with stoichiometry and reversibility arrays to
         represent a metabolic network.
@@ -272,9 +274,16 @@ class FluxCone:
         # Stoichiometric matrix
         self.stoich = stoichiometry  # np.array
 
+        # Store cobra-model
+        self.cobra = cobra_model
+        if cobra_model == None:
+            self.id = "Unnamed model"
+        else:
+            self.id = cobra_model.id
         # Number of metabolites and reactions
         self.num_metabs, self.num_reacs = np.shape(stoichiometry)  # int
-
+        
+        
         # {0,1} vector for reversible reactions
         self.rev = reversibility  # np.array
 
@@ -283,7 +292,7 @@ class FluxCone:
         
         # stoichiometric matrix after splitting all reversible reactions
         self.split_stoich = np.c_[self.stoich, -self.stoich[:, supp(self.rev)]]
-
+        
 
     @classmethod
     def from_sbml(cls, path_to_sbml: str):
@@ -294,7 +303,8 @@ class FluxCone:
 
         # read sbml-file
         sbml_model = cobra.io.read_sbml_model(path_to_sbml)
-
+        
+        
         # extract stoichiometric matrix
         stoich = cobra.util.array.create_stoichiometric_matrix(sbml_model)
 
@@ -302,7 +312,7 @@ class FluxCone:
         rev = np.array([rea.reversibility for rea in sbml_model.reactions]).astype(int)
 
         # initialize class object from extracted parameters
-        return cls(stoich, rev)
+        return cls(stoich, rev,sbml_model)
         
     @classmethod
     def from_bigg_id(cls,bigg_id: str):
@@ -321,7 +331,7 @@ class FluxCone:
         rev = np.array([rea.reversibility for rea in bigg_model.reactions]).astype(int)
 
         # initialize class object from extracted parameters
-        return cls(stoich, rev)
+        return cls(stoich, rev, bigg_model)
     
     def rank_test(self,vector):
         """
