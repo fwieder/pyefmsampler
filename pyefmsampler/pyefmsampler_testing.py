@@ -23,8 +23,10 @@ if __name__ == "__main__":
     #essential_indices =[20352,20372,20408,20590,21153,21845,21861,22346,23939,24307,24311,24319,24784,27563,27564,27565,27566,27567,27568,27569,48728,48849]
     #efm_sample = np.load("/Users/frederik/pyefmsampler_metamodel_10k.npy")
     #efm_supps = [supp(efm) for efm in efm_sample]
-    
-    
+    #objective_index = find_objective_index(cobra_model)
+    #combined_efms = efm_combiner(model,objective_index,efm_sample,1000,recombine =True)
+    #rf_sample = sample_efms(model,objective_index, "rf" , blockset_percent = 10 , max_attempts = attempts, max_efms = len(combined_efms), essential_indices = essential_indices, random_search_direction = True)
+
     
     model_id = "e_coli_core"
     cobra_model = cobra.io.load_model(model_id)
@@ -56,7 +58,7 @@ if __name__ == "__main__":
     
     
     
-    combined_efms = efm_combiner(model,objective_index,df_sample,10000,recombine =True)
+    combined_efms = efm_combiner(model,objective_index,rf_sample,10000,recombine =True)
     
     #df_sample = sample_efms(model,objective_index, "df" , blockset_percent = 100 , max_attempts = attempts, max_efms = len(combined_efms), essential_indices = essential_indices, random_search_direction = False)
     #df_sample = np.array([unsplit_vector(efm,model) for efm in df_sample])
@@ -64,5 +66,5 @@ if __name__ == "__main__":
     rf_sample = np.array([unsplit_vector(efm,model) for efm in rf_sample])
     
     
-    embeddinf_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [combined_efms,rf_sample,df_sample],
+    embedding_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [combined_efms,rf_sample,df_sample],
     names =["combined_efms","random_first","depth_first"], neighbors = 200, title_name="Support Comparison", min_dist = 0.1 )
