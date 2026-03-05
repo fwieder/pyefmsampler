@@ -44,27 +44,37 @@ if __name__ == "__main__":
     random_search_direction = True
     
     attempts = 1000000
-    max_efms = 100
+    max_efms = 200
     
     
     
-    #wf_sample = sample_efms(model,objective_index, "wf" , blockset_percent , attempts,max_efms,essential_indices,random_search_direction = False)
-    #wf_sample = np.array([unsplit_vector(efm,model) for efm in wf_sample])
     
-    #rf_sample = sample_efms(model,objective_index, "rf" , blockset_percent = 100 , max_attempts = attempts, max_efms = max_efms, essential_indices = essential_indices, random_search_direction = True)
-    #rf_sample = np.array([unsplit_vector(efm,model) for efm in rf_sample])
     df_sample = sample_efms(model,objective_index, "df" , blockset_percent = 100 , max_attempts = attempts, max_efms = max_efms, essential_indices = essential_indices, random_search_direction = False)
     df_sample = np.array([unsplit_vector(efm,model) for efm in df_sample])
     
-    
-    
-    combined_efms = efm_combiner(model,objective_index,rf_sample,10000,recombine =True)
-    
-    #df_sample = sample_efms(model,objective_index, "df" , blockset_percent = 100 , max_attempts = attempts, max_efms = len(combined_efms), essential_indices = essential_indices, random_search_direction = False)
-    #df_sample = np.array([unsplit_vector(efm,model) for efm in df_sample])
-    rf_sample = sample_efms(model,objective_index, "rf" , blockset_percent = 100 , max_attempts = attempts, max_efms = len(combined_efms), essential_indices = essential_indices, random_search_direction = True)
+    rf_sample = sample_efms(model,objective_index, "rf" , blockset_percent = 100 , max_attempts = attempts, max_efms = max_efms, essential_indices = essential_indices, random_search_direction = True)
     rf_sample = np.array([unsplit_vector(efm,model) for efm in rf_sample])
     
     
-    embedding_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [combined_efms,rf_sample,df_sample],
-    names =["combined_efms","random_first","depth_first"], neighbors = 200, title_name="Support Comparison", min_dist = 0.1 )
+    
+    
+    embedding_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [rf_sample,df_sample],
+    names =["random_first","depth_first"], neighbors = 200, title_name = "Comparison of search strategies", min_dist = 0.1, colors = ["red","blue"])
+    
+    
+    
+    #rf_sample = sample_efms(model,objective_index, "rf" , blockset_percent = 100 , max_attempts = attempts, max_efms = 500, essential_indices = essential_indices, random_search_direction = True)
+    #rf_sample = np.array([unsplit_vector(efm,model) for efm in rf_sample])
+    
+    combined_efms = efm_combiner(model,objective_index,rf_sample,1000,recombine =True)
+
+    combined_efms_df = efm_combiner(model,objective_index,df_sample,1000,recombine =True)
+
+    
+    
+    embedding_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [combined_efms],
+    names =["combined_efms_rf"], neighbors = 200, title_name = "Comparison of combined EFMs", min_dist = 0.1, colors = ["red"] )
+    
+    embedding_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [combined_efms_df],
+    names =["combined_efms_df"], neighbors = 200, title_name = "Comparison of combined EFMs", min_dist = 0.1, colors = ["blue"] )
+    

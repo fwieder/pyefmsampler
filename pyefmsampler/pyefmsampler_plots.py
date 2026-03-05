@@ -229,7 +229,8 @@ def umap_supps_multiple(
     names=None,
     neighbors=10,
     title_name="",
-    min_dist=0.1
+    min_dist=0.1,
+    colors = None
 ):
     """
     full_set : list of EFMs
@@ -237,6 +238,10 @@ def umap_supps_multiple(
     names    : list of names for samples
     neighbors: UMAP n_neighbors
     """
+    # ---------- Safety checks ----------
+    
+    if colors is not None and len(colors) != len(samples):
+        raise ValueError("colors must have the same length as samples")
 
     # ---------- Convert to binary supports ----------
     full_bin = supports_to_binary_matrix(
@@ -285,10 +290,18 @@ def umap_supps_multiple(
 
     # Color palette
     cmap = plt.cm.Set1
+
+   
+    
     sample_embeddings = []
 
     for i, sample in enumerate(samples):
-
+        
+        if colors is None:
+            color = cmap(i % 20)
+        else:
+            color = colors[i]
+        
         sample_bin = supports_to_binary_matrix(
             [supp(efm) for efm in sample],
             len(sample[0])
@@ -305,7 +318,6 @@ def umap_supps_multiple(
         embedding_sample = embedding_full[indices]
         sample_embeddings.append(embedding_sample)
 
-        color = cmap(i % 20)
 
         plt.scatter(
             embedding_sample[:, 0],
@@ -328,16 +340,16 @@ def umap_supps_multiple(
 
     plt.legend(handles=legend_handles, loc="upper right")
 
-    plt.title(
-        f"UMAP Projection {title_name}\n"
-        f"Trustworthiness: {trust:.3f} | "
-        f"Spread: {spread:.3f} | "
-        f"n_neighbors: {neighbors}"
+    plt.title( 
+        f"{title_name}"
     )
 
     plt.xlabel("UMAP1")
     plt.ylabel("UMAP2")
+    plt.figtext(0.5, -0.05, f"Trustworthiness: {trust:.3f}    Spread: {spread:.3f}    n_neighbors: {neighbors}", ha="center", fontsize=10)
     plt.tight_layout()
+
+    plt.savefig(str(names)+".pdf",format = "pdf",bbox_inches = "tight", dpi=300)
     plt.show()
 
     return embedding_full, sample_embeddings
