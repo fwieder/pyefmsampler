@@ -16,27 +16,32 @@ from tqdm import tqdm
 
 if __name__ == "__main__":
     #model_id = "/Users/frederik/Documents/pyefmsampler/metamodel_20230510.xml"
+    #model_id = "/Users/frederik/Downloads/MODEL1510220000_url.xml"
     #model = FluxCone.from_sbml(model_id)
     
     
     #cobra_model = cobra.io.read_sbml_model(model_id)
     #essential_indices =[20352,20372,20408,20590,21153,21845,21861,22346,23939,24307,24311,24319,24784,27563,27564,27565,27566,27567,27568,27569,48728,48849]
-    #efm_sample = np.load("/Users/frederik/pyefmsampler_metamodel_10k.npy")
-    #efm_supps = [supp(efm) for efm in efm_sample]
+    #efmsampler_sample = np.load("/Users/frederik/pyefmsampler_metamodel_10k.npy")
+    #efmsampler_supps = [supp(efm) for efm in efmsampler_sample]
     #objective_index = find_objective_index(cobra_model)
-    #combined_efms = efm_combiner(model,objective_index,efm_sample,1000,recombine =True)
-    #rf_sample = sample_efms(model,objective_index, "rf" , blockset_percent = 10 , max_attempts = attempts, max_efms = len(combined_efms), essential_indices = essential_indices, random_search_direction = True)
-
+    #rf_sample = sample_efms(model,objective_index, "rf" , blockset_percent = 10 , max_attempts = 10000, max_efms = 500, essential_indices = essential_indices, random_search_direction = True)
+    #np.save("rf_sample", rf_sample)
+    #combined_efms = efm_combiner(model,objective_index,efmsampler_sample, attempts = 10000,max_efms=500,recombine =True)
     
-    model_id = "e_coli_core"
+    #import sys
+    #sys.exit()
+    
+    
+    model_id = "iAF1260"
     cobra_model = cobra.io.load_model(model_id)
     model = FluxCone.from_bigg_id(model_id)
-    all_efms = model.get_efms_efmtool()
+    #all_efms = model.get_efms_efmtool()
     
 
     objective_index = find_objective_index(cobra_model)
     
-    biomass_efms = all_efms[np.abs(all_efms[:,objective_index])> 1e-9]
+    #biomass_efms = all_efms[np.abs(all_efms[:,objective_index])> 1e-9]
     
     
     essential_indices = find_essential_reactions(model.split_stoich, objective_index)
@@ -44,37 +49,37 @@ if __name__ == "__main__":
     random_search_direction = True
     
     attempts = 1000000
-    max_efms = 200
+    max_efms = 1000
     
-    
-    
-    
-    df_sample = sample_efms(model,objective_index, "df" , blockset_percent = 100 , max_attempts = attempts, max_efms = max_efms, essential_indices = essential_indices, random_search_direction = False)
-    df_sample = np.array([unsplit_vector(efm,model) for efm in df_sample])
+    #df_sample = sample_efms(model,objective_index, "df" , blockset_percent = 100 , max_attempts = attempts, max_efms = max_efms, essential_indices = essential_indices, random_search_direction = False)
+    #df_sample = np.array([unsplit_vector(efm,model) for efm in df_sample])
     
     rf_sample = sample_efms(model,objective_index, "rf" , blockset_percent = 100 , max_attempts = attempts, max_efms = max_efms, essential_indices = essential_indices, random_search_direction = True)
     rf_sample = np.array([unsplit_vector(efm,model) for efm in rf_sample])
     
+    umap_supps(rf_sample,neighbors=100)
+    
+    #combined_efms = efm_combiner(model,objective_index,rf_sample,max_attempts = 10000,max_efms = max_efms,recombine =True)
     
     
     
-    embedding_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [rf_sample,df_sample],
-    names =["random_first","depth_first"], neighbors = 200, title_name = "Comparison of search strategies", min_dist = 0.1, colors = ["red","blue"])
+    #embedding_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [rf_sample,df_sample],
+    #names =["random_first","depth_first"], neighbors = 200, title_name = "Comparison of search strategies", min_dist = 0.1, colors = ["red","blue"])
     
     
     
     #rf_sample = sample_efms(model,objective_index, "rf" , blockset_percent = 100 , max_attempts = attempts, max_efms = 500, essential_indices = essential_indices, random_search_direction = True)
     #rf_sample = np.array([unsplit_vector(efm,model) for efm in rf_sample])
     
-    combined_efms = efm_combiner(model,objective_index,rf_sample,1000,recombine =True)
+    #combined_efms = efm_combiner(model,objective_index,rf_sample,1000,recombine =True)
 
-    combined_efms_df = efm_combiner(model,objective_index,df_sample,1000,recombine =True)
+    #combined_efms_df = efm_combiner(model,objective_index,df_sample,1000,recombine =True)
 
     
     
-    embedding_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [combined_efms],
-    names =["combined_efms_rf"], neighbors = 200, title_name = "Comparison of combined EFMs", min_dist = 0.1, colors = ["red"] )
+    #embedding_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [combined_efms],
+    #names =["combined_efms_rf"], neighbors = 200, title_name = "Comparison of combined EFMs", min_dist = 0.1, colors = ["red"] )
     
-    embedding_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [combined_efms_df],
-    names =["combined_efms_df"], neighbors = 200, title_name = "Comparison of combined EFMs", min_dist = 0.1, colors = ["blue"] )
+    #embedding_full, sample_embeddings = umap_supps_multiple(full_set = biomass_efms,samples = [combined_efms_df],
+    #names =["combined_efms_df"], neighbors = 200, title_name = "Comparison of combined EFMs", min_dist = 0.1, colors = ["blue"] )
     

@@ -61,7 +61,7 @@ def combine_efms(efm1,efm2,target,model,max_new_efms = 0):
         return []
     for cancel_index in possible_cancels:
         blockset = np.union1d(np.setdiff1d(np.arange(model.num_reacs),combined_supp),cancel_index)
-        composed_efm =  unsplit_vector(find_efm(model.split_stoich, target, blocked=blockset),model)
+        composed_efm =  unsplit_vector(find_efm(model.split_stoich, target, blocked=blockset,costs=np.random.rand(model.split_stoich.shape[1])),model)
         if len(supp(composed_efm>0)) and tuple(supp(composed_efm)) not in new_supps:
             new_efms.append(composed_efm)
             new_supps.append(tuple(supp(composed_efm)))

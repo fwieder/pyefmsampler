@@ -85,22 +85,26 @@ def sample_efms(model, target,search_strategy:str = "wf", blockset_percent:int =
             
     return efms
 
-def efm_combiner(model,objective_index,start_efms,attempts,recombine = False):
+def efm_combiner(model,objective_index,start_efms,max_attempts,max_efms,recombine = False):
     combined_efms = [efm for efm in start_efms]
     combined_supps = [supp(efm) for efm in combined_efms]
-    for i in tqdm(range(attempts)):
-        if recombine:
-            pair = random.sample(range(len(combined_efms)),2)
-            
-        else:
-            pair = random.sample(range(len(start_efms)),2)
-        
-        new_efms = combine_efms(combined_efms[pair[0]],combined_efms[pair[1]],objective_index,model)
-
-        for efm in new_efms:
-            if supp(efm) not in combined_supps:
-                combined_efms.append(efm)
-                combined_supps.append(supp(efm))
+    with tqdm(total=max_attempts, desc="Searching EFMs") as pbar:
+        for i in range(max_attempts):
+            if recombine:
+                pair = random.sample(range(len(combined_efms)),2)
                 
-    print(len(combined_efms)-len(start_efms), " new EFMs found.")
-    return combined_efms
+            else:
+                pair = random.sample(range(len(start_efms)),2)
+            
+            pbar.update(1)  # Update progress bar
+            new_efms = combine_efms(combined_efms[pair[0]],combined_efms[pair[1]],objective_index,model)
+            
+            for efm in new_efms:
+                if supp(efm) not in combined_supps:
+                    combined_efms.append(efm)
+                    combined_supps.append(supp(efm))
+                    if len(combined_efms)-len(start_efms) >=max_efms:
+                        return combined_efms
+            pbar.set_postfix({"EFMs Found": len(combined_efms)}) #,"Dimension of sample": curr_dim}) # Update progress bar info
+        print(len(combined_efms)-len(start_efms), " new EFMs found.")
+        return combined_efms
