@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.env
+pyefmsampler/pyefmsampler_dev
+pyefmsampler/pyefmsampler_testing
