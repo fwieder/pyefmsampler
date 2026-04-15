@@ -6,9 +6,9 @@ Created on Wed Apr 30 11:26:43 2025
 @author: frederik
 """
 
-from pyefmsampler import sample_efms
+from pyefmsampler.functions import sample_efms
 
-from pyefmsampler_functions import *
+from pyefmsampler.helpers import *
 
 
 import numpy as np

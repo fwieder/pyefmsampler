@@ -13,7 +13,7 @@ import umap
 
 from collections import Counter
 
-from pyefmsampler_functions import supports_to_binary_matrix,supp
+from pyefmsampler.helpers import supports_to_binary_matrix,supp
 
 from matplotlib.ticker import MaxNLocator
 from matplotlib.lines import Line2D

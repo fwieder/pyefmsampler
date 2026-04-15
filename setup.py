@@ -7,7 +7,7 @@ Created on Fri Apr 25 10:46:04 2025
 """
 
 import os
-from setuptools import setup
+from setuptools import setup,find_packages
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -19,7 +19,7 @@ setup(
     author="Frederik Wieder",
     description=("pyEFMsampler"),
     url="https://github.com/fwieder/pyefmsampler",
-    packages=["pyefmsampler"],
+    packages = find_packages(),
     long_description=read("Readme.md"),
     install_requires=[
         "numpy",
@@ -27,7 +27,7 @@ setup(
         "scipy",
         "cobra",
         "tqdm",
-        "umap-learn"
+        "umap-learn",
         "matplotlib"
     ],
 )

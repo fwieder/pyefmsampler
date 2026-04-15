@@ -6,7 +6,7 @@ Created on Fri Apr 25 11:13:50 2025
 @author: frederik
 """
 
-from pyefmsampler_functions import find_efm,supp,find_essential_reactions,combine_efms,unsplit_vector
+from pyefmsampler.helpers import find_efm,supp,find_essential_reactions,combine_efms,unsplit_vector
 import numpy as np
 import random
 from tqdm import tqdm
