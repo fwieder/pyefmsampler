@@ -1,26 +1,21 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Apr 25 10:46:04 2025
-
-@author: frederik
-"""
-
 import os
-from setuptools import setup,find_packages
+from setuptools import setup, find_packages
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-
 setup(
     name="pyefmsampler",
-    version="1.0.0",
+    version="0.1.0",
     author="Frederik Wieder",
-    description=("pyEFMsampler"),
+    description="pyEFMsampler",
     url="https://github.com/fwieder/pyefmsampler",
-    packages = find_packages(),
-    long_description=read("Readme.md"),
+    
+    package_dir={"": "src"},                 # 🔥 THIS LINE IS THE FIX
+    packages=find_packages(where="src"),     # already correct
+    
+    long_description=read("README.md"),      # ⚠️ fix capitalization
+    
     install_requires=[
         "numpy",
         "efmtool",
