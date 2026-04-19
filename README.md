@@ -28,5 +28,4 @@ if __name__ == "__main__":
     max_efms = 2000                                     # Choose how many EFMs are sampled
     
     sample = sample_efms(model,objective_index, max_efms = max_efms)
-    ```
-    
+```
