@@ -22,8 +22,7 @@ if __name__ == "__main__":
     model = FluxCone.from_bigg_id(model_id)             # Create Fluxcone-object that contains all relevant information
     
 
-    cobra_model = cobra.io.load_model(model_id)         # Create a cobra model
-    objective_index = find_objective_index(cobra_model) # Determine the index of the optimisation target defined in the cobra model
+    objective_index = find_objective_index(model) # Determine the index of the optimisation target defined in the sbml file
     
     max_efms = 2000                                     # Choose how many EFMs are sampled
     
