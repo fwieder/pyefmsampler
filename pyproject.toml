@@ -6,10 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "pyefmsampler"
 version = "0.1.0"
 description = "Sampling elementary flux modes in metabolic networks"
-authors = [
-    { name = "Frederik Wieder", email = "YOUR_EMAIL_HERE" }
-]
-license = { file = "LICENSE" }
+authors = [{name = "Frederik Wieder"}]
+license = { text = "GPL-3.0-or-later" }
+
 readme = "README.md"
 requires-python = ">=3.10"
 
