@@ -105,14 +105,14 @@ def zero(vector, tol=1e-8):
     return np.where(abs(np.array(vector)) < tol)[0]
 
 
-def find_objective_index(cobra_model):
+def find_objective_index(model):
     """
     Searches for the index of the reaction that is optimized in the objective function.
 
 
     Parameters
     ----------
-    cobra_model : cobra.Model
+    model : FluxCone model
         
     Returns
     -------
@@ -122,11 +122,11 @@ def find_objective_index(cobra_model):
     """
     
     import re
-    s = str(cobra_model.objective)
+    s = str(model.cobra.objective)
     match = re.search(r'\*(.*?)\s*-', s)
     if match:
         result = match.group(1).strip()
-    return [rea.id for rea in cobra_model.reactions].index(result)
+    return [rea.id for rea in model.cobra.reactions].index(result)
 
 
 def unsplit_vector(split_vector, model):

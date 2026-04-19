@@ -79,7 +79,7 @@ def sample_efms(model,target, max_efms = 1000, essential_indices = []):
                     stagnation_counter = 0
                     
                     if len(efms) == max_efms:
-                        return efms
+                        return np.array([unsplit_vector(efm,model) for efm in efms])
                     
                     
                     for i in supp(efm):

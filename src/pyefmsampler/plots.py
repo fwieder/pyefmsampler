@@ -14,10 +14,8 @@ import umap
 from collections import Counter
 
 from pyefmsampler.helpers import supports_to_binary_matrix,supp
-
 from matplotlib.ticker import MaxNLocator
 from matplotlib.lines import Line2D
-
 from sklearn.manifold import trustworthiness
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import pairwise_distances
@@ -29,8 +27,7 @@ def plot_reaction_frequencies(efms,model):
     ----------
     efms : np.array
         Set of EFMs
-    model_id : str
-        Name of the model for title
+    model : FluxCone model
 
     Returns
     -------
@@ -41,28 +38,27 @@ def plot_reaction_frequencies(efms,model):
     rea_freqs = sum([list(supp(efm)) for efm in efms],[])
     
     data = sorted(Counter(rea_freqs).items())
-    print(f"{len(data)} different reactions used.")
+    print(f"{len(data)} of {np.shape(model.stoich)[1]} reactions occur in the sample.")
     
     ax = plt.figure().gca()      # Get the current axes
-    ax.set_title(model_id + " - pyefmsampler found EFMs: " + str(len(efms)))
+    ax.set_title(model.id + " - pyefmsampler found EFMs: " + str(len(efms)))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_xlabel("Reaction Index")
     ax.set_ylabel("Number of EFMs")
     plt.bar(list(zip(*data))[0],list(zip(*data))[1])
-    plt.savefig(model_id + "pyefmsampler_" + model.id +".pdf",dpi=300)
+    plt.savefig(model.id + "pyefmsampler_" + model.id +".pdf",dpi=300)
     plt.show()
     
 
-def plot_efm_lengths(efms,model_id):
+def plot_efm_lengths(efms,model):
     """
 
     Parameters
     ----------
     efms : np.array
         Set of EFMs
-    model_id : str
-        Name of the model for title
+    model : FluxCone model
 
     Returns
     -------
@@ -76,53 +72,16 @@ def plot_efm_lengths(efms,model_id):
    
     
     ax = plt.figure().gca()      # Get the current axes
-    ax.set_title(model_id + " - pyefmsampler found EFMs: " + str(len(efms)))
+    ax.set_title(model.id + " - pyefmsampler found EFMs: " + str(len(efms)))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_xlabel("Efm_length")
+    ax.set_xlabel("EFM_length")
     ax.set_ylabel("Number of EFMs")
     plt.bar(list(zip(*data))[0],list(zip(*data))[1])
-    plt.savefig(model_id + "pyefmsampler_" + model_id +".pdf",dpi=300)
+    plt.savefig(model.id + "pyefmsampler_" + model.id +".pdf",dpi=300)
     plt.show()
 
-def umap_two_samples(efms1,efms2, neighbors = 10):
-    efms1 = supports_to_binary_matrix([supp(efm) for efm in efms1], len(efms1[0]))
-    efms2 = supports_to_binary_matrix([supp(efm) for efm in efms2], len(efms2[0]))    
-    
-    all_efms = np.r_[efms1,efms2]
-    
-    # Fit UMAP
-    umap_model = umap.UMAP(n_components=2, metric='hamming',n_neighbors=neighbors,min_dist=0.1,random_state=42)
-
-    embedding_full = umap_model.fit_transform(all_efms)
-    embedding_sample1 = embedding_full[:len(efms1)]
-    embedding_sample2 = embedding_full[len(efms1):]
-    
-    # Compute trustworthiness score
-    trust = trustworthiness(all_efms, embedding_full, n_neighbors=5)
-    print(f"Trustworthiness (0-1): {trust:.3f}")
-
-    # Pairwise distance variance (spread)
-    pairwise_dist = pairwise_distances(embedding_full)
-    spread = np.std(pairwise_dist)
-    print(f"Pairwise Distance Std Dev (Spread): {spread:.3f}")
-    
-    plt.figure(figsize=(10, 7))
-    plt.scatter(embedding_sample1[:, 0], embedding_sample1[:, 1], c='blue', alpha=0.5, s=5, label='Sample1')
-    plt.scatter(embedding_sample2[:, 0], embedding_sample2[:, 1], c='red' , alpha=0.4, s=5, label='Sample2')
-
-    plt.title("UMAP Projection (Hamming)")
-    plt.xlabel("UMAP1")
-    plt.ylabel("UMAP2")
-    plt.legend(loc='upper right')
-    plt.figtext(0.5, -0.05, f"Trustworthiness: {trust:.3f}    Spread: {spread:.3f}", ha="center", fontsize=10)
-
-    plt.tight_layout()
-    plt.show()
-
-    
-
-def umap_supps(efms, labels=None,neighbors = 10):
+def umap_efms(efms, labels=None,neighbors = 10):
     efms = supports_to_binary_matrix([supp(efm) for efm in efms], len(efms[0]))
 
     # Fit UMAP
@@ -169,7 +128,7 @@ def umap_supps(efms, labels=None,neighbors = 10):
 
     return embedding
 
-def umap_supps_sample(full_set, sample, labels=None, neighbors=10, name = ""):
+def umap_efm_sample(sample,full_set, labels=None, neighbors=10, name = ""):
     full_set = supports_to_binary_matrix([supp(efm) for efm in full_set], len(full_set[0]))
     sample = supports_to_binary_matrix([supp(efm) for efm in sample], len(sample[0]))
     # Define a helper to convert rows to consistent tuples of ints
@@ -221,135 +180,3 @@ def umap_supps_sample(full_set, sample, labels=None, neighbors=10, name = ""):
     plt.show()
 
     return embedding_full, embedding_sample
-
-
-def umap_supps_multiple(
-    full_set,
-    samples,
-    names=None,
-    neighbors=10,
-    title_name="",
-    min_dist=0.1,
-    colors = None
-):
-    """
-    full_set : list of EFMs
-    samples  : list of sample lists (each sample must be subset of full_set)
-    names    : list of names for samples
-    neighbors: UMAP n_neighbors
-    """
-    # ---------- Safety checks ----------
-    
-    if colors is not None and len(colors) != len(samples):
-        raise ValueError("colors must have the same length as samples")
-
-    # ---------- Convert to binary supports ----------
-    full_bin = supports_to_binary_matrix(
-        [supp(efm) for efm in full_set],
-        len(full_set[0])
-    )
-
-    def row_key(row):
-        return tuple(int(x) for x in row)
-
-    full_rows_dict = {row_key(row): idx for idx, row in enumerate(full_bin)}
-
-    # ---------- Fit UMAP ONCE ----------
-    umap_model = umap.UMAP(
-        n_components=2,
-        metric="hamming",
-        n_neighbors=neighbors,
-        min_dist=min_dist,
-        random_state=42
-    )
-
-    embedding_full = umap_model.fit_transform(full_bin)
-
-    # ---------- Compute global metrics ----------
-    trust = trustworthiness(full_bin, embedding_full, n_neighbors=neighbors)
-    spread = np.std(pairwise_distances(embedding_full))
-
-    # ---------- Plot ----------
-    plt.figure(figsize=(10, 7))
-
-    # Plot full set (background)
-    plt.scatter(
-        embedding_full[:, 0],
-        embedding_full[:, 1],
-        c="lightgray",
-        alpha=0.4,
-        s=5
-    )
-
-    legend_handles = [
-        Line2D([0], [0], marker="o", color="w",
-               markerfacecolor="lightgray",
-               markersize=6,
-               label=f"Full set ({len(full_set)})")
-    ]
-
-    # Color palette
-    cmap = plt.cm.Set1
-
-   
-    
-    sample_embeddings = []
-
-    for i, sample in enumerate(samples):
-        
-        if colors is None:
-            color = cmap(i % 20)
-        else:
-            color = colors[i]
-        
-        sample_bin = supports_to_binary_matrix(
-            [supp(efm) for efm in sample],
-            len(sample[0])
-        )
-
-        # Map to full embedding indices
-        try:
-            indices = [full_rows_dict[row_key(row)] for row in sample_bin]
-        except KeyError:
-            raise ValueError(
-                f"Sample {i} contains elements not present in full_set."
-            )
-
-        embedding_sample = embedding_full[indices]
-        sample_embeddings.append(embedding_sample)
-
-
-        plt.scatter(
-            embedding_sample[:, 0],
-            embedding_sample[:, 1],
-            color=color,
-            s=12,
-            alpha=0.9
-        )
-
-        if names:
-            label = f"{names[i]} ({len(sample)})"
-        else:
-            label = f"Sample {i+1} ({len(sample)})"
-        legend_handles.append(
-            Line2D([0], [0], marker="o", color="w",
-                   markerfacecolor=color,
-                   markersize=6,
-                   label=label)
-        )
-
-    plt.legend(handles=legend_handles, loc="upper right")
-
-    plt.title( 
-        f"{title_name}"
-    )
-
-    plt.xlabel("UMAP1")
-    plt.ylabel("UMAP2")
-    plt.figtext(0.5, -0.05, f"Trustworthiness: {trust:.3f}    Spread: {spread:.3f}    n_neighbors: {neighbors}", ha="center", fontsize=10)
-    plt.tight_layout()
-
-    plt.savefig(str(names)+".pdf",format = "pdf",bbox_inches = "tight", dpi=300)
-    plt.show()
-
-    return embedding_full, sample_embeddings
