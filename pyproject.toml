@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyefmsampler"
+version = "0.1.0"
+description = "Sampling elementary flux modes in metabolic networks"
+authors = [
+    { name = "Frederik Wieder", email = "YOUR_EMAIL_HERE" }
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "numpy",
+    "scipy",
+    "cobra",
+    "efmtool",
+    "matplotlib",
+    "tqdm",
+    "umap-learn"
+]
+
+[project.urls]
+Homepage = "https://github.com/fwieder/pyefmsampler"
+
+[tool.setuptools.packages.find]
+where = ["src"]
