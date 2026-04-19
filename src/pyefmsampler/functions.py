@@ -98,7 +98,7 @@ def sample_efms(model,target, max_efms = 1000, essential_indices = []):
                 print("Stopping early due to stagnation.")
                 break
             pbar.set_postfix({"EFMs Found": len(efms),"Largest Blockset":max(blocksets.keys())}) #,"Dimension of sample": curr_dim}) # Update progress bar info
-    return efms
+    return np.array([unsplit_vector(efm,model) for efm in efms])
 
 def efm_combiner(model,objective_index,start_efms,max_attempts,max_efms,recombine = False):
     combined_efms = [efm for efm in start_efms]
