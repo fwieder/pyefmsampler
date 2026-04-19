@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 
 
-def sample_efms(model, target,search_strategy:str = "wf", blockset_percent:int = 100 ,max_attempts=1000,max_efms = 1000,essential_indices = [],random_search_direction = False):
+def sample_efms(model,target, max_efms = 1000, essential_indices = []):
     
     """
     Repeatedly calls find_efm with randomly chosen blocked sets until
@@ -31,58 +31,73 @@ def sample_efms(model, target,search_strategy:str = "wf", blockset_percent:int =
     Returns:
     list: A list of unique EFMs found.
     """
-    
-    if search_strategy == "df":
-        popindex = -1
-    elif search_strategy == "wf":
-        popindex = 0
         
     # Initialisation:
     efms = []
     supports = []
-    blocksets = [[]]
-    
+    blocksets = {}
+
     
     # Expand stoichiometric matrix for reversible reactions
     S = model.split_stoich
     
-    opti_dir = np.ones(S.shape[1]) if random_search_direction == False else np.random.rand(S.shape[1])
     
     if essential_indices == []:
         print("Determining essential reactions...")
         essential_indices = find_essential_reactions(S, target)
         print(len(essential_indices), "essential reactions found.")
-    curr_dim = 1
-    with tqdm(total=max_attempts, desc="Searching EFMs") as pbar:
-        for attempts in range(max_attempts):
-            if len(blocksets) == 0:
-                return efms
+
+    with tqdm(total=max_efms, desc="Searching EFMs") as pbar:
+        attempts = 0
+        stagnation_counter = 0
+        max_stagnation = 500  # safety threshold
+        
+        while len(efms) < max_efms:
+            if attempts == 0:
+                blocked = []
+            else:
+                if not blocksets:
+                    print("No more blocksets to explore.")
+                    break
             
-            if search_strategy == "rf":
-                popindex = random.randint(0,len(blocksets)-1)
-            
-            blocked = blocksets.pop(popindex)
-            pbar.update(1)  # Update progress bar
+                block_num = random.choice(list(blocksets.keys()))
+                blocked = blocksets[block_num].pop(random.randrange(len(blocksets[block_num])))
+                if not blocksets[block_num]:
+                    del blocksets[block_num]
+            attempts += 1
             
             
             try:
-                efm = find_efm(S, target,blocked,costs = opti_dir)
+                efm = find_efm(S, target,blocked,costs = np.random.rand(S.shape[1]))
 
-                if supp(efm) not in supports: # and len(supp(efm))>2:
+                if supp(efm) not in supports:
                     efms.append(efm)
-                    #if len(efms) % 50 == 0:
-                    #    curr_dim = np.linalg.matrix_rank(np.array([unsplit_vector(efm,model) for efm in efms]))
+                    supports.append(supp(efm))
+
+                    pbar.update(1) # Update progress bar
+                    
+                    stagnation_counter = 0
+                    
                     if len(efms) == max_efms:
                         return efms
-                    supports.append(supp(efm))
-                    for i in random.sample(supp(efm), round(len(supp(efm))*blockset_percent/100)):
-                        if i not in essential_indices and sorted(blocked+[np.int64(i)]) not in blocksets:
-                            blocksets.append(sorted(blocked + [np.int64(i)]))
-                            
+                    
+                    
+                    for i in supp(efm):
+                        key = len(blocked) + 1
+                        if key not in blocksets:
+                            blocksets[key] = []
+                        if i not in essential_indices and sorted(blocked+[np.int64(i)]) not in blocksets[key]:
+                           
+                            blocksets[key].append(sorted(blocked + [np.int64(i)]))
+            
             except ValueError:
                 pass
-            pbar.set_postfix({"EFMs Found": len(efms),"Remaining blocksets":len(blocksets)}) #,"Dimension of sample": curr_dim}) # Update progress bar info
+            stagnation_counter += 1
             
+            if stagnation_counter > max_stagnation:
+                print("Stopping early due to stagnation.")
+                break
+            pbar.set_postfix({"EFMs Found": len(efms),"Largest Blockset":max(blocksets.keys())}) #,"Dimension of sample": curr_dim}) # Update progress bar info
     return efms
 
 def efm_combiner(model,objective_index,start_efms,max_attempts,max_efms,recombine = False):
