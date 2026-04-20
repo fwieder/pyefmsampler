@@ -1,6 +1,14 @@
+# Python cache
 *.pyc
-testing
-*.egg-info.DS_Store
+__pycache__/
+
+# Build artifacts
 build/
+dist/
+*.egg-info/
+
+# macOS files
 .DS_Store
 
+# Testing folder
+testing/
