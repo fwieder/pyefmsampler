@@ -128,6 +128,91 @@ def umap_efms(efms, labels=None,neighbors = 10):
 
     return embedding
 
+def umap_efm_sets(efm_sets, neighbors=10, sample_names=None):
+    """
+    efm_sets: list of lists of EFMs, e.g. [efms1, efms2, efms3]
+    sample_names: optional list of names for legend
+    """
+
+    # -----------------------------
+    # Flatten EFMs + track origin
+    # -----------------------------
+    all_efms = []
+    labels = []
+
+    for i, efms in enumerate(efm_sets):
+        for efm in efms:
+            all_efms.append(efm)
+            labels.append(i)
+
+    # -----------------------------
+    # Convert to binary support matrix
+    # -----------------------------
+    supports = [supp(efm) for efm in all_efms]
+    n_reactions = len(all_efms[0])
+    X = supports_to_binary_matrix(supports, n_reactions)
+
+    # -----------------------------
+    # UMAP embedding
+    # -----------------------------
+    umap_model = umap.UMAP(
+        n_components=2,
+        metric='hamming',
+        n_neighbors=neighbors,
+        min_dist=0.1,
+        random_state=42
+    )
+
+    embedding = umap_model.fit_transform(X)
+
+    # -----------------------------
+    # Quality metrics
+    # -----------------------------
+    trust = trustworthiness(X, embedding, n_neighbors=neighbors)
+    print(f"Trustworthiness (0-1): {trust:.3f}")
+
+    pairwise_dist = pairwise_distances(embedding)
+    spread = np.std(pairwise_dist)
+    print(f"Pairwise Distance Std Dev (Spread): {spread:.3f}")
+
+    # -----------------------------
+    # Plot (color by sample)
+    # -----------------------------
+    plt.figure(figsize=(10, 7))
+
+    labels = np.array(labels)
+    unique_labels = np.unique(labels)
+
+    for lab in unique_labels:
+        idx = labels == lab
+        name = sample_names[lab] if sample_names else f"Sample {lab+1}"
+
+        plt.scatter(
+            embedding[idx, 0],
+            embedding[idx, 1],
+            label=name,
+            alpha=0.7,
+            s=8
+        )
+
+    plt.title(f"UMAP Projection (Hamming) – {len(all_efms)} EFMs")
+    plt.xlabel("UMAP1")
+    plt.ylabel("UMAP2")
+    plt.legend()
+
+    plt.figtext(
+        0.5,
+        -0.05,
+        f"Trustworthiness: {trust:.3f}    Spread: {spread:.3f}    Neighbors: {neighbors}",
+        ha="center",
+        fontsize=10
+    )
+
+    plt.tight_layout()
+    plt.show()
+
+    return embedding, labels
+
 def umap_efm_sample(sample,full_set, labels=None, neighbors=10, name = ""):
     full_set = supports_to_binary_matrix([supp(efm) for efm in full_set], len(full_set[0]))
     sample = supports_to_binary_matrix([supp(efm) for efm in sample], len(sample[0]))
