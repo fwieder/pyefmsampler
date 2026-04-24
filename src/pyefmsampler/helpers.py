@@ -61,7 +61,7 @@ def combine_efms(efm1,efm2,target,model):
         return []
     for cancel_index in possible_cancels:
         blockset = np.union1d(np.setdiff1d(np.arange(model.num_reacs),combined_supp),cancel_index)
-        composed_efm =  unsplit_vector(find_efm(model.split_stoich, target, blocked=blockset,costs=np.random.rand(model.split_stoich.shape[1])),model)
+        composed_efm =  find_efm(model.split_stoich, target, blocked=blockset,costs=np.random.rand(model.split_stoich.shape[1]))
         if len(supp(composed_efm>0)) and tuple(supp(composed_efm)) not in new_supps:
             new_efms.append(composed_efm)
             new_supps.append(tuple(supp(composed_efm)))
@@ -125,40 +125,6 @@ def find_objective_index(model):
     if match:
         result = match.group(1).strip()
     return [rea.id for rea in model.cobra.reactions].index(result)
-
-
-def unsplit_vector(split_vector, model):
-    """
-    Rejoins pairs of irreversible reactions that result from splitting a reversible reaction
-
-
-    Parameters
-    ----------
-    split_vector : np.array 
-        vector containing forward and backward irreversible reactions for each reversible reaction.
-    model : FluxCone object
-        model providing information which reactions were split to obtain split_vector.
-
-    Returns
-    -------
-    unsplit : np.array
-        vector in the original flux cone, containing reversible reactions.
-    """
-    
-    
-    rev_indices = np.where(model.rev)[0]  # Indices of reversible reactions
-    original_shape = len(model.rev)
-    
-    orig = split_vector[:original_shape]  # First part contains original fluxes
-    tosub = np.zeros_like(orig)  # To store values to subtract
-    splits = split_vector[original_shape:]  # The extra split fluxes
-    
-    for i, j in enumerate(rev_indices):
-        tosub[j] = splits[i]  # Assign the split backward flux
-    
-    unsplit = orig - tosub  # Reconstruct the original flux vector
-    
-    return unsplit
 
 
 def check_essential(S,biomass_index,reaction_index):

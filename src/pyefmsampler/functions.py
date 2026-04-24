@@ -6,7 +6,7 @@ Created on Fri Apr 25 11:13:50 2025
 @author: frederik
 """
 
-from pyefmsampler.helpers import find_efm,supp,find_essential_reactions,combine_efms,unsplit_vector
+from pyefmsampler.helpers import find_efm,supp,find_essential_reactions,combine_efms
 import numpy as np
 import random
 from tqdm import tqdm
@@ -16,21 +16,8 @@ from tqdm import tqdm
 
 
 
-def sample_efms(model,target, max_efms = 1000, essential_indices = None):
+def sample_efms(model,target, max_efms = 1000, essential_indices = None, solves_per_blockset = 1):
     
-    """
-    Repeatedly calls find_efm with randomly chosen blocked sets until
-    the desired number of EFMs is found, avoiding duplicate blocked sets
-    and supersets of failed sets.
-    
-    Parameters:
-    model: Metabolic model object with stoichiometry and reversibility data.
-    target (int): The index of the reaction that must have at least flux 1.
-    max_attempts (int): Maximum number of tries before stopping.
-    
-    Returns:
-    list: A list of unique EFMs found.
-    """
         
     # Initialisation:
     efms = []
@@ -68,29 +55,27 @@ def sample_efms(model,target, max_efms = 1000, essential_indices = None):
             
             
             try:
-                efm = find_efm(S, target,blocked,costs = np.random.rand(S.shape[1]))
-
-                if supp(efm) not in supports:
-                    efms.append(efm)
-                    supports.append(supp(efm))
-
-                    pbar.update(1) # Update progress bar
-                    
+                
+                for _ in range (solves_per_blockset):
+                    efm = find_efm(S, target,blocked,costs = np.random.rand(S.shape[1]))
+                    if supp(efm) not in supports:
+                        efms.append(efm)
+                        supports.append(supp(efm))
+                        pbar.update(1) # Update progress bar
+                        for i in supp(efm):
+                            key = len(blocked) + 1
+                            if key not in blocksets:
+                                blocksets[key] = []
+                            new_blockset = sorted(blocked+[np.int64(i)])
+                            if i not in essential_indices and new_blockset not in blocksets[key]:
+                            
+                                blocksets[key].append(new_blockset)
                     stagnation_counter = 0
                     
                     if len(efms) == max_efms:
                         return efms
                     
                     
-                    for i in supp(efm):
-                        key = len(blocked) + 1
-                        if key not in blocksets:
-                            blocksets[key] = []
-                        new_blockset = sorted(blocked+[np.int64(i)])
-                        if i not in essential_indices and new_blockset not in blocksets[key]:
-                           
-                            blocksets[key].append(new_blockset)
-            
             except ValueError:
                 pass
             stagnation_counter += 1
