@@ -322,7 +322,48 @@ class FluxCone:
 
         return False
     
+    def split(self,unsplit_array):
+        if np.shape(unsplit_array)[-1] != len(self.rev):
+            raise ValueError("Input array shape does not match the number of reactions in the model.")
+        if unsplit_array.ndim == 1:
+            split_vector = np.concatenate([unsplit_array, -unsplit_array[np.array(supp(self.rev))]])
+            return split_vector
+        elif unsplit_array.ndim == 2:
+            split_matrix = np.c_[unsplit_array,-unsplit_array[:,np.array(supp(self.rev))]]
+            return split_matrix
+        else:
+            raise TypeError(
+                f"Wrong input type {type(unsplit_array)} must be 1d or 2d np.array."
+        )
     
+    def unsplit(self,split_array):
+        
+        rev_indices = np.where(self.rev)[0]    # Indices of reversible reactions
+        n = len(self.rev)                      # Number of reactions in model before splitting
+        
+        if split_array.ndim == 1:
+            orig = split_array[:n]
+            splits = split_array[n:]
+            
+            # subtract backward fluxes at reversible positions
+            
+            orig[rev_indices] -= splits
+            return orig
+
+        elif split_array.ndim == 2:
+            orig = split_array[:, :n]
+            splits = split_array[:, n:]
+
+            # subtract column-wise for reversible reactions
+            
+            orig[:, rev_indices] -= splits
+            return orig
+
+        else:
+            raise TypeError(
+                f"Wrong input type {type(split_array)} must be 1D or 2D np.array."
+            )
+
     def degree(self, vector):
         """
         The function calculates the degree of a vector within the flux cone.
@@ -335,6 +376,11 @@ class FluxCone:
 
         return int(self.num_reacs - np.linalg.matrix_rank(S[zero(np.dot(S, vector))]))
     
+    def get_backward_index(self, rev_index):
+        rev_indices = np.where(self.rev)[0]
+        n = len(self.rev)
+        k = np.where(rev_indices == rev_index)[0][0]
+        return n + k
     
     def get_lin_dim(self):
         """
