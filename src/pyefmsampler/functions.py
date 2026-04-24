@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 
 
-def sample_efms(model,target, max_efms = 1000, essential_indices = []):
+def sample_efms(model,target, max_efms = 1000, essential_indices = None):
     
     """
     Repeatedly calls find_efm with randomly chosen blocked sets until
@@ -42,7 +42,7 @@ def sample_efms(model,target, max_efms = 1000, essential_indices = []):
     S = model.split_stoich
     
     
-    if essential_indices == []:
+    if essential_indices is None:
         print("Determining essential reactions...")
         essential_indices = find_essential_reactions(S, target)
         print(len(essential_indices), "essential reactions found.")
@@ -79,16 +79,17 @@ def sample_efms(model,target, max_efms = 1000, essential_indices = []):
                     stagnation_counter = 0
                     
                     if len(efms) == max_efms:
-                        return np.array([unsplit_vector(efm,model) for efm in efms])
+                        return efms
                     
                     
                     for i in supp(efm):
                         key = len(blocked) + 1
                         if key not in blocksets:
                             blocksets[key] = []
-                        if i not in essential_indices and sorted(blocked+[np.int64(i)]) not in blocksets[key]:
+                        new_blockset = sorted(blocked+[np.int64(i)])
+                        if i not in essential_indices and new_blockset not in blocksets[key]:
                            
-                            blocksets[key].append(sorted(blocked + [np.int64(i)]))
+                            blocksets[key].append(new_blockset)
             
             except ValueError:
                 pass
@@ -98,7 +99,7 @@ def sample_efms(model,target, max_efms = 1000, essential_indices = []):
                 print("Stopping early due to stagnation.")
                 break
             pbar.set_postfix({"EFMs Found": len(efms),"Largest Blockset":max(blocksets.keys())}) #,"Dimension of sample": curr_dim}) # Update progress bar info
-    return np.array([unsplit_vector(efm,model) for efm in efms])
+    return efms
 
 def efm_combiner(model,objective_index,start_efms,max_attempts,max_efms,recombine = False):
     combined_efms = [efm for efm in start_efms]

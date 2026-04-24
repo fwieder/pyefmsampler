@@ -24,7 +24,7 @@ from scipy.optimize import linprog
 
 
 
-def combine_efms(efm1,efm2,target,model,max_new_efms = 0):
+def combine_efms(efm1,efm2,target,model):
     """
     Find specific large blocksets, by combining two EFMs and cancelling a reversible reaction. The corresponding LP is typically significantly less complex than in the general case.
     Parameters
@@ -65,8 +65,6 @@ def combine_efms(efm1,efm2,target,model,max_new_efms = 0):
         if len(supp(composed_efm>0)) and tuple(supp(composed_efm)) not in new_supps:
             new_efms.append(composed_efm)
             new_supps.append(tuple(supp(composed_efm)))
-            if len(new_efms) >= max_new_efms and max_new_efms > 0:
-                return new_efms
     return new_efms
 
 
