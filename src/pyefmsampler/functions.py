@@ -16,74 +16,105 @@ from tqdm import tqdm
 
 
 
-def sample_efms(model,target, max_efms = 1000, essential_indices = None, solves_per_blockset = 1):
-    
-        
-    # Initialisation:
+def sample_efms(model, target, max_efms=1000,
+                essential_indices=None,
+                solves_per_blockset=1,
+                progress=True):
+
     efms = []
     supports = []
     blocksets = {}
 
-    
-    # Expand stoichiometric matrix for reversible reactions
     S = model.split_stoich
-    
-    
+
     if essential_indices is None:
         print("Determining essential reactions...")
         essential_indices = find_essential_reactions(S, target)
         print(len(essential_indices), "essential reactions found.")
 
-    with tqdm(total=max_efms, desc="Searching EFMs") as pbar:
-        attempts = 0
-        stagnation_counter = 0
-        max_stagnation = 500  # safety threshold
-        
-        while len(efms) < max_efms:
-            if attempts == 0:
-                blocked = []
-            else:
-                if not blocksets:
-                    print("No more blocksets to explore.")
-                    break
-            
-                block_num = random.choice(list(blocksets.keys()))
-                blocked = blocksets[block_num].pop(random.randrange(len(blocksets[block_num])))
-                if not blocksets[block_num]:
-                    del blocksets[block_num]
-            attempts += 1
-            
-            
-            try:
-                
-                for _ in range (solves_per_blockset):
-                    efm = find_efm(S, target,blocked,costs = np.random.rand(S.shape[1]))
-                    if supp(efm) not in supports:
-                        efms.append(efm)
-                        supports.append(supp(efm))
-                        pbar.update(1) # Update progress bar
-                        for i in supp(efm):
-                            key = len(blocked) + 1
-                            if key not in blocksets:
-                                blocksets[key] = []
-                            new_blockset = sorted(blocked+[np.int64(i)])
-                            if i not in essential_indices and new_blockset not in blocksets[key]:
-                            
-                                blocksets[key].append(new_blockset)
-                    stagnation_counter = 0
-                    
-                    if len(efms) == max_efms:
-                        return efms
-                    
-                    
-            except ValueError:
-                pass
-            stagnation_counter += 1
-            
-            if stagnation_counter > max_stagnation:
-                print("Stopping early due to stagnation.")
+    # ---------------------------
+    # THIS MUST ALWAYS RUN
+    # ---------------------------
+    pbar = tqdm(total=max_efms, desc="Searching EFMs") if progress else None
+
+    attempts = 0
+    stagnation_counter = 0
+    max_stagnation = 500
+
+    while len(efms) < max_efms:
+
+        if attempts == 0:
+            blocked = []
+        else:
+            if not blocksets:
+                print("No more blocksets to explore.")
                 break
-            pbar.set_postfix({"EFMs Found": len(efms),"Largest Blockset":max(blocksets.keys())}) #,"Dimension of sample": curr_dim}) # Update progress bar info
+
+            block_num = random.choice(list(blocksets.keys()))
+            blocked = blocksets[block_num].pop(
+                random.randrange(len(blocksets[block_num]))
+            )
+
+            if not blocksets[block_num]:
+                del blocksets[block_num]
+
+        attempts += 1
+
+        try:
+            for _ in range(solves_per_blockset):
+
+                efm = find_efm(
+                    S,
+                    target,
+                    blocked,
+                    costs=np.random.rand(S.shape[1])
+                )
+
+                s = tuple(supp(efm))
+
+                if s not in supports:
+                    efms.append(efm)
+                    supports.append(s)
+
+                    if progress:
+                        pbar.update(1)
+
+                    for i in s:
+                        key = len(blocked) + 1
+                        if key not in blocksets:
+                            blocksets[key] = []
+
+                        new_blockset = sorted(blocked + [np.int64(i)])
+
+                        if (i not in essential_indices and
+                                new_blockset not in blocksets[key]):
+                            blocksets[key].append(new_blockset)
+
+                stagnation_counter = 0
+
+                if len(efms) == max_efms:
+                    if progress:
+                        pbar.close()
+                    return efms
+
+        except ValueError:
+            pass
+
+        stagnation_counter += 1
+
+        if stagnation_counter > max_stagnation:
+            print("Stopping early due to stagnation.")
+            break
+
+        if progress:
+            pbar.set_postfix({
+                "EFMs Found": len(efms),
+                "Largest Blockset": max(blocksets.keys()) if blocksets else 0
+            })
+
+    if progress:
+        pbar.close()
+
     return efms
 
 def efm_combiner(model,objective_index,start_efms,max_attempts,max_efms,recombine = False):

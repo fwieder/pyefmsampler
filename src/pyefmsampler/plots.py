@@ -85,7 +85,7 @@ def umap_efms(efms, labels=None,neighbors = 10):
     efms = supports_to_binary_matrix([supp(efm) for efm in efms], len(efms[0]))
 
     # Fit UMAP
-    umap_model = umap.UMAP(n_components=2, metric='hamming',n_neighbors=neighbors,min_dist=0.1,random_state=42)
+    umap_model = umap.UMAP(n_components=2, metric='hamming',n_neighbors=neighbors,min_dist=0.1)
     embedding = umap_model.fit_transform(efms)
     # Compute trustworthiness score
     trust = trustworthiness(efms, embedding, n_neighbors=neighbors)
@@ -128,7 +128,7 @@ def umap_efms(efms, labels=None,neighbors = 10):
 
     return embedding
 
-def umap_efm_sets(efm_sets, neighbors=10, sample_names=None):
+def umap_efm_sets(efm_sets, neighbors=10, sample_names=None, random_state=42):
     """
     efm_sets: list of lists of EFMs, e.g. [efms1, efms2, efms3]
     sample_names: optional list of names for legend
@@ -160,7 +160,7 @@ def umap_efm_sets(efm_sets, neighbors=10, sample_names=None):
         metric='hamming',
         n_neighbors=neighbors,
         min_dist=0.1,
-        random_state=42
+        random_state=random_state
     )
 
     embedding = umap_model.fit_transform(X)
@@ -221,7 +221,7 @@ def umap_efm_sample(sample,full_set, labels=None, neighbors=10, name = ""):
         return tuple(int(x) for x in row)
 
     # Fit UMAP on full set
-    umap_model = umap.UMAP(n_components=2, metric='hamming', n_neighbors=neighbors, min_dist=0.1, random_state=42)
+    umap_model = umap.UMAP(n_components=2, metric='hamming', n_neighbors=neighbors, min_dist=0.1,random_state=42)
     embedding_full = umap_model.fit_transform(full_set)
 
     # Map sample indices (requires exact row match)
