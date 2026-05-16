@@ -20,7 +20,7 @@ from sklearn.manifold import trustworthiness
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import pairwise_distances
 
-def plot_reaction_frequencies(efms,model):
+def plot_reaction_frequencies(efms, model, title=None):
     """
 
     Parameters
@@ -28,6 +28,8 @@ def plot_reaction_frequencies(efms,model):
     efms : np.array
         Set of EFMs
     model : FluxCone model
+    title : str, optional
+        Custom plot title.
 
     Returns
     -------
@@ -35,18 +37,22 @@ def plot_reaction_frequencies(efms,model):
 
     """
     
-    rea_freqs = sum([list(supp(efm)) for efm in efms],[])
-    
+    rea_freqs = sum([list(supp(efm)) for efm in efms], [])
     data = sorted(Counter(rea_freqs).items())
     print(f"{len(data)} of {np.shape(model.stoich)[1]} reactions occur in the sample.")
     
     ax = plt.figure().gca()      # Get the current axes
-    ax.set_title(model.id + " - pyefmsampler found EFMs: " + str(len(efms)))
+    if title is not None:
+        ax.set_title(title)
+    else:
+        ax.set_title(model.id + " - pyefmsampler found EFMs: " + str(len(efms)))
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_xlabel("Reaction Index")
     ax.set_ylabel("Number of EFMs")
-    plt.bar(list(zip(*data))[0],list(zip(*data))[1])
+    if data:
+        x_vals, y_vals = zip(*data)
+        plt.bar(x_vals, y_vals)
     plt.savefig(model.id + "pyefmsampler_" + model.id +".pdf",dpi=300)
     plt.show()
     

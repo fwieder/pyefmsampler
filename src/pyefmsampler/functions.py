@@ -82,13 +82,13 @@ def sample_efms(model, target, max_efms=1000,
                     for i in s:
                         key = len(blocked) + 1
                         if key not in blocksets:
-                            blocksets[key] = []
+                            blocksets[key] = set()
 
                         new_blockset = sorted(blocked + [np.int64(i)])
 
                         if (i not in essential_indices and
                                 new_blockset not in blocksets[key]):
-                            blocksets[key].append(new_blockset)
+                            blocksets[key].add(new_blockset)
 
                 stagnation_counter = 0
 

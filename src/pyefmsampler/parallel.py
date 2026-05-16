@@ -124,7 +124,7 @@ def _mult_efm_worker(args):
 # ----------------------------
 # Main sampling function
 # ----------------------------
-def mult_efm_samples(model, objective_index, essential_indices, 
+def sample_efms_parallel(model, objective_index, essential_indices, 
                      n_tasks=10, n_workers=None, max_efms=2000):
     """
     Sample EFMs using multiple parallel workers with real-time progress tracking.
@@ -151,7 +151,7 @@ def mult_efm_samples(model, objective_index, essential_indices,
     """
     
     if n_workers is None:
-        n_workers = min(cpu_count(), n_tasks)
+        n_workers = min(cpu_count()-1, n_tasks)
     
     print(f"Starting {n_tasks} workers with {n_workers} processes...\n")
     
