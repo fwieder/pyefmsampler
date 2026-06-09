@@ -16,6 +16,7 @@ from collections import Counter
 from pyefmsampler.helpers import supports_to_binary_matrix,supp
 from matplotlib.ticker import MaxNLocator
 from matplotlib.lines import Line2D
+from sklearn.decomposition import PCA
 from sklearn.manifold import trustworthiness
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import pairwise_distances
@@ -134,6 +135,62 @@ def umap_efms(efms, labels=None,neighbors = 10):
 
     return embedding
 
+
+def pca_efms(efms, labels=None, neighbors=10, random_state=42):
+    """Perform PCA on EFMs after scaling each vector to unit length."""
+    all_efms = [np.asarray(efm, dtype=float) for efm in efms]
+    try:
+        X = np.stack(all_efms)
+    except ValueError as e:
+        raise ValueError("All EFMs must have the same dimensionality for PCA.") from e
+
+    norms = np.linalg.norm(X, axis=1)
+    nonzero = norms != 0
+    if np.any(nonzero):
+        X[nonzero] = X[nonzero] / norms[nonzero, np.newaxis]
+
+    pca_model = PCA(n_components=2, random_state=random_state)
+    embedding = pca_model.fit_transform(X)
+
+    trust = trustworthiness(X, embedding, n_neighbors=neighbors)
+    print(f"Trustworthiness (0-1): {trust:.3f}")
+
+    if labels is not None:
+        sil_score = silhouette_score(embedding, labels)
+        print(f"Silhouette Score (0-1): {sil_score:.3f}")
+
+    pairwise_dist = pairwise_distances(embedding)
+    spread = np.std(pairwise_dist)
+    print(f"Pairwise Distance Std Dev (Spread): {spread:.3f}")
+
+    explained = np.sum(pca_model.explained_variance_ratio_)
+    print(f"Explained Variance (2 components): {explained:.3f}")
+
+    n = X.shape[0]
+    colors = np.linspace(0, 1, n)
+
+    plt.figure(figsize=(10, 7))
+    scatter = plt.scatter(
+        embedding[:, 0],
+        embedding[:, 1],
+        c=colors,
+        cmap='Reds',
+        alpha=0.8,
+        s=5
+    )
+
+    plt.title("PCA Projection (Scaled EFMs) - " + str(len(efms)) + " EFMs")
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    cbar = plt.colorbar(scatter)
+    cbar.set_label("EFM Index (Early → Late)")
+    plt.figtext(0.5, -0.05, f"Trustworthiness: {trust:.3f}" + "    " + f"Pairwise Distance Std Dev (Spread): {spread:.3f}" + "    " + f"Explained Var: {explained:.3f}", ha="center", fontsize=10)
+
+    plt.tight_layout()
+    plt.show()
+
+    return embedding
+
 def umap_efm_sets(efm_sets, neighbors=10, sample_names=None, random_state=42):
     """
     efm_sets: list of lists of EFMs, e.g. [efms1, efms2, efms3]
@@ -210,6 +267,94 @@ def umap_efm_sets(efm_sets, neighbors=10, sample_names=None, random_state=42):
         0.5,
         -0.05,
         f"Trustworthiness: {trust:.3f}    Spread: {spread:.3f}    Neighbors: {neighbors}",
+        ha="center",
+        fontsize=10
+    )
+
+    plt.tight_layout()
+    plt.show()
+
+    return embedding, labels
+
+
+def pca_efm_sets(efm_sets, neighbors=10, sample_names=None, random_state=42):
+    """
+    efm_sets: list of lists of EFMs, e.g. [efms1, efms2, efms3]
+    sample_names: optional list of names for legend
+    """
+
+    # -----------------------------
+    # Flatten EFMs + track origin
+    # -----------------------------
+    all_efms = []
+    labels = []
+
+    for i, efms in enumerate(efm_sets):
+        for efm in efms:
+            all_efms.append(np.asarray(efm, dtype=float))
+            labels.append(i)
+
+    # -----------------------------
+    # Convert to data matrix and normalize lengths
+    # -----------------------------
+    try:
+        X = np.stack(all_efms)
+    except ValueError as e:
+        raise ValueError("All EFMs must have the same dimensionality for PCA.") from e
+
+    norms = np.linalg.norm(X, axis=1)
+    nonzero = norms != 0
+    if np.any(nonzero):
+        X[nonzero] = X[nonzero] / norms[nonzero, np.newaxis]
+
+    # -----------------------------
+    # PCA embedding
+    # -----------------------------
+    pca_model = PCA(n_components=2, random_state=random_state)
+    embedding = pca_model.fit_transform(X)
+
+    # -----------------------------
+    # Quality metrics
+    # -----------------------------
+    trust = trustworthiness(X, embedding, n_neighbors=neighbors)
+    print(f"Trustworthiness (0-1): {trust:.3f}")
+
+    pairwise_dist = pairwise_distances(embedding)
+    spread = np.std(pairwise_dist)
+    print(f"Pairwise Distance Std Dev (Spread): {spread:.3f}")
+
+    explained = np.sum(pca_model.explained_variance_ratio_)
+    print(f"Explained Variance (2 components): {explained:.3f}")
+
+    # -----------------------------
+    # Plot (color by sample)
+    # -----------------------------
+    plt.figure(figsize=(10, 7))
+
+    labels = np.array(labels)
+    unique_labels = np.unique(labels)
+
+    for lab in unique_labels:
+        idx = labels == lab
+        name = sample_names[lab] if sample_names else f"Sample {lab+1}"
+
+        plt.scatter(
+            embedding[idx, 0],
+            embedding[idx, 1],
+            label=name,
+            alpha=0.7,
+            s=8
+        )
+
+    plt.title(f"PCA Projection (Scaled EFMs) – {len(all_efms)} EFMs")
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    plt.legend()
+
+    plt.figtext(
+        0.5,
+        -0.05,
+        f"Trustworthiness: {trust:.3f}    Spread: {spread:.3f}    Explained Var: {explained:.3f}",
         ha="center",
         fontsize=10
     )
