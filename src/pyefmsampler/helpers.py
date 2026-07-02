@@ -23,48 +23,29 @@ from scipy.optimize import linprog
 
 
 
-
 def combine_efms(efm1,efm2,target,model):
-    """
-    Find specific large blocksets, by combining two EFMs and cancelling a reversible reaction. The corresponding LP is typically significantly less complex than in the general case.
-    Parameters
-    ----------
-    efm1 : np.array
-        First EFM
-    efm2 : np.array
-        Second EFM
-    target : int
-        Reaction that must be active
-    model : FluxCone object
-        Fluxcone that has the input vectors as EFMs.
+    n = len(model.rev)
+    rev_indices = np.where(model.rev)[0]
+    
+    tol = 1e-7
+    
+    # backward indices in one shot
+    backward_indices = n + np.arange(len(rev_indices))
 
-    Returns
-    -------
-    list
-        List containing EFMs that result from combining input EFMs.
-    """
-    
-    rev_supp1 = np.intersect1d(supp(model.rev), supp(efm1))
-    rev_supp2 = np.intersect1d(supp(model.rev), supp(efm2))
-    
-    pos1 = np.intersect1d(np.where(efm1 > 0)[0],rev_supp1)
-    pos2 = np.intersect1d(np.where(efm2 > 0)[0],rev_supp1)
-    
-    neg1 = np.intersect1d(np.where(efm1 < 0)[0],rev_supp1)
-    neg2 = np.intersect1d(np.where(efm2 < 0)[0],rev_supp2)
-    
-    possible_cancels = np.union1d(np.intersect1d(pos1, neg2),np.intersect1d(pos2,neg1))
+    mask = (efm1[rev_indices] > tol) & (efm2[backward_indices] > tol)
+    cancels = rev_indices[mask]
+
     combined_supp = np.union1d(supp(efm1),supp(efm2))
     new_efms = []
-    new_supps = []
-    if len(possible_cancels) == 0:
+    new_supps = set()
+    if len(cancels) == 0:
         return []
-    for cancel_index in possible_cancels:
+    for cancel_index in cancels:
         blockset = np.union1d(np.setdiff1d(np.arange(model.num_reacs),combined_supp),cancel_index)
         composed_efm =  find_efm(model.split_stoich, target, blocked=blockset,costs=np.random.rand(model.split_stoich.shape[1]))
-        if len(supp(composed_efm>0)) and tuple(supp(composed_efm)) not in new_supps:
+        if supp(composed_efm) not in new_supps:
             new_efms.append(composed_efm)
-            new_supps.append(tuple(supp(composed_efm)))
+            new_supps.add(supp(composed_efm))
     return new_efms
 
 

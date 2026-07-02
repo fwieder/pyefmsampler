@@ -82,13 +82,13 @@ def sample_efms(model, target, max_efms=1000,
                     for i in s:
                         key = len(blocked) + 1
                         if key not in blocksets:
-                            blocksets[key] = set()
+                            blocksets[key] = []
 
                         new_blockset = sorted(blocked + [np.int64(i)])
 
                         if (i not in essential_indices and
                                 new_blockset not in blocksets[key]):
-                            blocksets[key].add(new_blockset)
+                            blocksets[key].append(new_blockset)
 
                 stagnation_counter = 0
 
@@ -117,26 +117,18 @@ def sample_efms(model, target, max_efms=1000,
 
     return efms
 
-def efm_combiner(model,objective_index,start_efms,max_attempts,max_efms,recombine = False):
+def efm_combiner(model,start_efms,max_efms,target = None):
     combined_efms = [efm for efm in start_efms]
-    combined_supps = [supp(efm) for efm in combined_efms]
-    with tqdm(total=max_attempts, desc="Searching EFMs") as pbar:
-        for i in range(max_attempts):
-            if recombine:
-                pair = random.sample(range(len(combined_efms)),2)
-                
-            else:
-                pair = random.sample(range(len(start_efms)),2)
-            
-            pbar.update(1)  # Update progress bar
-            new_efms = combine_efms(combined_efms[pair[0]],combined_efms[pair[1]],objective_index,model)
-            
-            for efm in new_efms:
-                if supp(efm) not in combined_supps:
-                    combined_efms.append(efm)
-                    combined_supps.append(supp(efm))
-                    if len(combined_efms)-len(start_efms) >=max_efms:
-                        return combined_efms
-            pbar.set_postfix({"EFMs Found": len(combined_efms)}) #,"Dimension of sample": curr_dim}) # Update progress bar info
-        print(len(combined_efms)-len(start_efms), " new EFMs found.")
-        return combined_efms
+    combined_supps = set(supp(efm) for efm in combined_efms)
+    pbar = tqdm(total=max_efms, desc="Combining EFMs")
+    while len(combined_efms) - len(start_efms) < max_efms:
+        pair = random.sample(combined_efms,2)
+        new_efms = combine_efms(pair[0],pair[1],target,model)
+        for efm in new_efms:
+            if supp(efm) not in combined_supps:
+                combined_efms.append(efm)
+                combined_supps.add(supp(efm))
+                pbar.update(1)
+        pbar.set_postfix({"EFMs Found": len(combined_efms)}) #,"Dimension of sample": curr_dim}) # Update progress bar info
+    
+    return combined_efms
