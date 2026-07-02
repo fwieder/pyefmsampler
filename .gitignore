@@ -9,6 +9,3 @@ dist/
 
 # macOS files
 .DS_Store
-
-# Testing folder
-testing/

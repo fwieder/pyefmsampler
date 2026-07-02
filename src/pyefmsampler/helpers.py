@@ -371,6 +371,29 @@ class FluxCone:
             self.stoich[:, np.array(supp(self.rev)) ]
         )
     
+    def is_in(self, vector):
+        """
+        Check if a given vector is in the flux cone defined by the stoichiometric matrix and reversibility vector.
+        
+        Parameters
+        ----------
+        vector : np.array
+            The vector to be checked.
+        
+        Returns
+        -------
+        bool
+            True if the vector is in the flux cone, False otherwise.
+        """
+        # Check if the vector satisfies the stoichiometric constraints (Sx = 0)
+        if not np.allclose(np.dot(self.stoich, vector), 0):
+            return False
+        
+        # Check if the vector satisfies the non-negativity constraints for irreversible reactions
+        if np.any(vector[np.array(supp(self.irr))] < 0):
+            return "Negative flux in irreversible reaction"
+        
+        return True
     
     
     def get_efms_efmtool(self, only_reversible=False,opts = dict({
