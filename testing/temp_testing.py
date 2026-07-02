@@ -45,7 +45,7 @@ def efmcomber(start_efms,model,num_of_test = 1000):
         
         res = (-neg_val_at_rev) * efms[pos_index] + pos_val_at_rev * efms[neg_index]        
         if np.allclose(res, 0):
-            print("Zero vector encountered, skipping...")
+            #print("Zero vector encountered, skipping...")
             continue
         if supp(res) in supports:
             #print("Duplicate support encountered, skipping...")

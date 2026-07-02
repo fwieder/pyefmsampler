@@ -50,9 +50,9 @@ def sample_efms_positioned(model, target, max_efms, essential_indices, solves_pe
                 break
 
             block_num = random.choice(list(blocksets.keys()))
-            blocked = blocksets[block_num].pop(
-                random.randrange(len(blocksets[block_num]))
-            )
+            blocked_entry = random.choice(tuple(blocksets[block_num]))
+            blocksets[block_num].remove(blocked_entry)
+            blocked = list(blocked_entry)
 
             if not blocksets[block_num]:
                 del blocksets[block_num]
@@ -80,13 +80,13 @@ def sample_efms_positioned(model, target, max_efms, essential_indices, solves_pe
                             continue
                         key = len(blocked) + 1
                         if key not in blocksets:
-                            blocksets[key] = []
+                            blocksets[key] = set()
 
-                        new_blockset = sorted(blocked + [np.int64(i)])
+                        new_blockset = tuple(sorted(blocked + [np.int64(i)]))
 
                         if (i not in essential_indices and
                                 new_blockset not in blocksets[key]):
-                            blocksets[key].append(new_blockset)
+                            blocksets[key].add(new_blockset)
 
                 stagnation_counter = 0
 
